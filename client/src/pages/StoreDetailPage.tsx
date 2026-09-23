@@ -26,7 +26,7 @@ import {
 } from '@databricks/appkit-ui/react';
 import { sql } from '@databricks/appkit-ui/js';
 import { ArrowLeft, Camera, CheckCircle2, GripVertical, Sparkles, Upload, Zap } from 'lucide-react';
-import { detectShelfPhoto } from '@/lib/detect-shelf';
+import { prepareShelfImage } from '@/lib/prepare-shelf-image';
 
 type StoreRow = {
   store_id: string;
@@ -390,13 +390,13 @@ export function StoreDetailPage() {
     setAnalysisError(null);
     try {
       const imageSource = imageData ?? previewUrl;
-      const detections = imageSource ? await detectShelfPhoto(imageSource) : undefined;
+      const modelImage = imageSource ? await prepareShelfImage(imageSource) : undefined;
       const res = await fetch('/api/shelf/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           store_id: store.store_id,
-          detections,
+          image_data: modelImage,
         }),
       });
       if (!res.ok) throw new Error('Analysis failed');
@@ -599,7 +599,7 @@ export function StoreDetailPage() {
             <CardHeader>
               <CardTitle>Capture / upload shelf photo</CardTitle>
               <CardDescription>
-                Stored in Lakebase with analysis metadata. Vision uses TensorFlow.js COCO-SSD on the photo pixels.
+                Stored in Lakebase with analysis metadata. Vision uses Databricks FMAPI multimodal analysis.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col sm:flex-row gap-3 sm:items-end">
@@ -634,7 +634,7 @@ export function StoreDetailPage() {
 
           {uploading && <p className="text-sm text-muted-foreground">Saving photo to Lakebase…</p>}
           {analyzing && (
-            <p className="text-sm text-muted-foreground">Running TensorFlow.js COCO-SSD on the shelf photo…</p>
+            <p className="text-sm text-muted-foreground">Running Databricks multimodal vision on the shelf photo…</p>
           )}
           {analysisError && (
             <Alert variant="destructive">

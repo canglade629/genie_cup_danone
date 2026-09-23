@@ -2,7 +2,7 @@
 
 Field-sales decision support for retail execution: prioritize stores, diagnose the shelf, recommend the next action, and quantify weekly euro impact.
 
-> **Prototype note:** This is a working Paris-pilot Databricks App. Store priority, signals, planograms, and sell-out come from Unity Catalog. Shelf vision runs TensorFlow.js COCO-SSD (with a color/grid fallback) on the selected photo. Databricks Model Serving remains the documented production-scale upgrade.
+> **Prototype note:** This is a working Paris-pilot Databricks App. Store priority, signals, planograms, and sell-out come from Unity Catalog. Shelf vision uses Llama 4 Maverick through Databricks Foundation Model APIs.
 
 ---
 
@@ -85,7 +85,7 @@ Accepting the NBA persists store, recommendation, rationale, projected lift, est
 - Consistent recommendations
 - An auditable decision record
 
-**Caveat:** photo analysis runs TensorFlow.js COCO-SSD (plus color/grid fallback) in the app. Databricks Model Serving (YOLO / multimodal) remains the production-scale path.
+**Caveat:** photo analysis uses the multimodal Llama 4 Maverick Foundation Model API. A specialized fine-tuned detector remains the path for pixel-precise production annotations.
 
 ### 1.5 Track shelf evolution
 
@@ -171,7 +171,7 @@ React (AppKit UI)
   ├─ useAnalyticsQuery / BarChart / DataTable / DonutChart
   │     → AppKit Analytics → SQL Warehouse → UC Delta
   └─ fetch /api/*
-        ├─ POST /api/shelf/analyze  → TensorFlow.js COCO-SSD (+ pixel fallback)
+        ├─ POST /api/shelf/analyze  → FMAPI multimodal shelf detection
         └─ recommendations / photos / simulations → Lakebase
 ```
 

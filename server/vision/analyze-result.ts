@@ -5,10 +5,9 @@ import type {
   ShelfDetection,
 } from '../routes/shelf/analyze-routes';
 
-export const DEMO_NOTE = 'No shelf image provided — upload a photo to run TensorFlow.js COCO-SSD.';
+export const DEMO_NOTE = 'No shelf image provided — upload a photo to run multimodal FMAPI analysis.';
 export const VISION_NOTE =
-  'TensorFlow.js COCO-SSD detections on the selected photo. Production can swap in Model Serving (YOLO / multimodal).';
-export const FALLBACK_NOTE = 'COCO-SSD unavailable; annotations come from color/grid analysis of the photo pixels.';
+  'Databricks Foundation Model API (Llama 4 Maverick) analyzed the selected shelf photo.';
 
 export function demoDetections(storeId: string): ShelfDetection[] {
   const detections: ShelfDetection[] = [

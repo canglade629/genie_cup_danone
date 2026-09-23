@@ -54,6 +54,10 @@ resources:
             securable_full_name: ${var.catalog}.${var.schema}.shelf_images
             securable_type: VOLUME
             permission: READ_VOLUME
+        - name: serving-endpoint
+          serving_endpoint:
+            name: databricks-llama-4-maverick
+            permission: CAN_QUERY
 
 targets:
   default:

@@ -8,3 +8,5 @@ env:
     valueFrom: genie-space
   - name: DATABRICKS_VOLUME_FILES
     valueFrom: shelf-images
+  - name: DATABRICKS_SERVING_ENDPOINT_NAME
+    valueFrom: serving-endpoint

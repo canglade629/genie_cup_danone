@@ -1,8 +1,0 @@
-{
-  "name": "whatwg-url",
-  "version": "5.0.0",
-  "description": "Node URL compatibility shim for TensorFlow's node-fetch dependency",
-  "main": "index.cjs",
-  "license": "UNLICENSED",
-  "private": true
-}

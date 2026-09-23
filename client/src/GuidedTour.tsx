@@ -66,7 +66,7 @@ const TOUR_STEPS: TourStep[] = [
     eyebrow: 'Observe execution',
     title: 'Analyze a new shelf photo',
     explanation:
-      'The rep can capture or upload a shelf image. TensorFlow.js COCO-SSD plus color analysis detect competitors, OOS voids, wrong placement, and missing promotional tags.',
+      'The rep can capture or upload a shelf image. Databricks FMAPI multimodal vision detects competitors, OOS voids, wrong placement, and missing promotional tags.',
     businessValue:
       'Faster OOS correction can recover 2–4% of total sales, while promo verification protects trade-spend ROI.',
   },
