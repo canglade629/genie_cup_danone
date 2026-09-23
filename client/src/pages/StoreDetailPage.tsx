@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useParams, useSearchParams } from 'react-router';
 import {
   Alert,
   AlertDescription,
@@ -186,7 +186,9 @@ function manufacturerTone(m: string) {
 
 export function StoreDetailPage() {
   const { storeId = '' } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const params = useMemo(() => ({ store_id: sql.string(storeId) }), [storeId]);
+  const activeTab = searchParams.get('tab') === 'sandbox' ? 'sandbox' : 'photos';
 
   const { data: storeRows, loading: storeLoading, error: storeError } = useAnalyticsQuery('store_detail', params);
   const { data: planogram, loading: planLoading } = useAnalyticsQuery('planogram_by_store', params);
@@ -445,7 +447,7 @@ export function StoreDetailPage() {
 
   return (
     <div className="space-y-6 w-full max-w-7xl mx-auto">
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3" data-tour="store-header">
         <Link
           to="/map"
           className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1 w-fit"
@@ -483,7 +485,7 @@ export function StoreDetailPage() {
         </div>
       </div>
 
-      <Card className="border-primary/30">
+      <Card className="border-primary/30" data-tour="store-signals">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-primary" />
@@ -519,14 +521,22 @@ export function StoreDetailPage() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="photos">
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => {
+          const next = new URLSearchParams(searchParams);
+          if (value === 'sandbox') next.set('tab', 'sandbox');
+          else next.delete('tab');
+          setSearchParams(next, { replace: true });
+        }}
+      >
         <TabsList>
           <TabsTrigger value="photos">Photos &amp; analysis</TabsTrigger>
           <TabsTrigger value="sandbox">Virtual shelf</TabsTrigger>
         </TabsList>
 
         <TabsContent value="photos" className="space-y-6 mt-4">
-          <Card>
+          <Card data-tour="photo-upload">
             <CardHeader>
               <CardTitle>Capture / upload shelf photo</CardTitle>
               <CardDescription>Stored in Lakebase with analysis metadata · evolution vs past visits</CardDescription>
@@ -643,7 +653,7 @@ export function StoreDetailPage() {
             </div>
           )}
 
-          <Card>
+          <Card data-tour="photo-history">
             <CardHeader>
               <CardTitle>Photo history (evolution)</CardTitle>
               <CardDescription>Past visits for this store · Lakebase app.shelf_photos</CardDescription>
@@ -686,7 +696,7 @@ export function StoreDetailPage() {
 
         <TabsContent value="sandbox" className="mt-4">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            <Card className="lg:col-span-3">
+            <Card className="lg:col-span-3" data-tour="virtual-shelf">
               <CardHeader className="flex flex-row items-start justify-between gap-3">
                 <div>
                   <CardTitle>Virtual shelf sandbox</CardTitle>
@@ -758,7 +768,7 @@ export function StoreDetailPage() {
               </CardContent>
             </Card>
 
-            <Card className="lg:col-span-2 border-primary/30">
+            <Card className="lg:col-span-2 border-primary/30" data-tour="business-value">
               <CardHeader>
                 <CardTitle>Business value analysis</CardTitle>
                 <CardDescription>Live impact of your virtual moves · weekly €</CardDescription>

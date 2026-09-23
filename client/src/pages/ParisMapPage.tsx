@@ -85,7 +85,7 @@ export function ParisMapPage() {
         </Alert>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4" data-tour="map-summary">
         <StatCard
           label="Stores on map"
           value={loading ? '…' : String(stores.length)}
@@ -117,7 +117,7 @@ export function ParisMapPage() {
         />
       </div>
 
-      <Card className="border-primary/30">
+      <Card className="border-primary/30" data-tour="signal-strip">
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div>
             <CardTitle className="flex items-center gap-2">
@@ -200,7 +200,7 @@ export function ParisMapPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2" data-tour="visit-queue">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-destructive" />

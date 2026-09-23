@@ -79,7 +79,7 @@ export function ActionsPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-tour="actions-summary">
         <Card>
           <CardContent className="pt-4 space-y-1">
             <p className="text-xs text-muted-foreground">Accepted recommendations</p>

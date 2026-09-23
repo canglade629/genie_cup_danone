@@ -1,14 +1,14 @@
-import { createBrowserRouter, RouterProvider, NavLink, Outlet, Link } from 'react-router';
+import { createBrowserRouter, RouterProvider, NavLink, Outlet, Link, Navigate } from 'react-router';
 import { useState } from 'react';
 import { Button, Sheet, SheetContent, SheetHeader, SheetTitle } from '@databricks/appkit-ui/react';
 import { Menu } from 'lucide-react';
 import { ParisMapPage } from './pages/ParisMapPage';
 import { StoreDetailPage } from './pages/StoreDetailPage';
 import { SignalsPage } from './pages/SignalsPage';
-import { DemoGuidePage } from './pages/DemoGuidePage';
 import { FirstConnectionPage, LandingPage } from './pages/LandingPage';
 import { RevenuePage } from './pages/RevenuePage';
 import { ActionsPage } from './pages/ActionsPage';
+import { GuidedTour } from './GuidedTour';
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
@@ -36,8 +36,8 @@ function NavLinks({
       <NavLink to="/map" className={linkClass} onClick={onClick}>
         Paris map
       </NavLink>
-      <NavLink to="/demo" className={linkClass} onClick={onClick}>
-        Demo guide
+      <NavLink to="/map?tour=1" className={() => linkClass({ isActive: false })} onClick={onClick}>
+        Start demo
       </NavLink>
       <NavLink to="/signals" className={linkClass} onClick={onClick}>
         Market signals
@@ -85,6 +85,7 @@ function Layout() {
       <main className="flex-1 p-4 md:p-6">
         <Outlet />
       </main>
+      <GuidedTour />
     </div>
   );
 }
@@ -96,7 +97,7 @@ const router = createBrowserRouter([
       { path: '/', element: <FirstConnectionPage /> },
       { path: '/welcome', element: <LandingPage /> },
       { path: '/map', element: <ParisMapPage /> },
-      { path: '/demo', element: <DemoGuidePage /> },
+      { path: '/demo', element: <Navigate to="/map?tour=1" replace /> },
       { path: '/stores/:storeId', element: <StoreDetailPage /> },
       { path: '/signals', element: <SignalsPage /> },
       { path: '/revenue', element: <RevenuePage /> },

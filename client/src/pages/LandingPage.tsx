@@ -41,7 +41,7 @@ export function LandingPage() {
           <div className="flex flex-col sm:flex-row gap-3">
             <button
               type="button"
-              onClick={() => enter('/demo')}
+              onClick={() => enter('/map?tour=1')}
               className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground"
             >
               <PlayCircle className="h-4 w-4" />
@@ -58,7 +58,7 @@ export function LandingPage() {
           </div>
 
           <p className="text-xs text-muted-foreground">
-            Recommended for first-time users: the walkthrough takes about seven minutes and includes presenter notes.
+            Recommended for first-time users: the interactive tour navigates the app and highlights each key feature.
           </p>
         </div>
 
