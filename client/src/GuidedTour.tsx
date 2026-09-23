@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { ArrowLeft, ArrowRight, Check, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, PlayCircle, X } from 'lucide-react';
 
 type TourStep = {
   route: string;
@@ -236,7 +236,26 @@ export function GuidedTour() {
     return { width, left, top };
   }, [targetRect]);
 
-  if (!active || !step) return null;
+  function startTour() {
+    setStepIndex(0);
+    setTargetRect(null);
+    setActive(true);
+    void navigate('/map?tour=1', { replace: true });
+  }
+
+  if (!active || !step) {
+    return (
+      <button
+        type="button"
+        onClick={startTour}
+        className="fixed bottom-5 right-5 z-[90] inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-lg hover:opacity-90"
+        aria-label="Start guided tour"
+      >
+        <PlayCircle className="h-4 w-4" />
+        Guided tour
+      </button>
+    );
+  }
 
   function finish() {
     setActive(false);
