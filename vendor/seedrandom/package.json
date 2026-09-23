@@ -1,0 +1,8 @@
+{
+  "name": "seedrandom",
+  "version": "3.0.5",
+  "description": "Deterministic RNG compatibility shim for TensorFlow.js",
+  "main": "index.cjs",
+  "license": "UNLICENSED",
+  "private": true
+}
