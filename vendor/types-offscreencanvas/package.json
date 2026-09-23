@@ -1,0 +1,7 @@
+{
+  "name": "@types/offscreencanvas",
+  "version": "2019.7.3",
+  "types": "index.d.ts",
+  "license": "UNLICENSED",
+  "private": true
+}

@@ -1,0 +1,7 @@
+{
+  "name": "@types/long",
+  "version": "4.0.2",
+  "types": "index.d.ts",
+  "license": "UNLICENSED",
+  "private": true
+}
