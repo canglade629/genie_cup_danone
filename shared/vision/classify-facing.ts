@@ -40,7 +40,6 @@ export function classifyFacing(rgb: Rgb, cocoClass?: string): FacingClass {
   if (s < 0.14 && l < 0.38) {
     return { label: 'OOS void', manufacturer: 'Empty', brand: '—' };
   }
-
   if (isBottle && h >= 80 && h <= 170 && s >= 0.15) {
     return { label: 'Volvic', manufacturer: 'Danone', brand: 'Volvic' };
   }
@@ -50,7 +49,6 @@ export function classifyFacing(rgb: Rgb, cocoClass?: string): FacingClass {
   if (isBottle && h >= 300 && h < 330 && s >= 0.2) {
     return { label: 'Yop', manufacturer: 'Yoplait', brand: 'Yoplait' };
   }
-
   if (h >= 185 && h <= 245 && s >= 0.18) {
     return { label: 'Activia Nature', manufacturer: 'Danone', brand: 'Activia' };
   }
@@ -76,5 +74,5 @@ export function classifyFacing(rgb: Rgb, cocoClass?: string): FacingClass {
     return { label: 'Nature yogurt', manufacturer: 'Danone', brand: 'Danone' };
   }
 
-  return { label: cocoClass ? cocoClass : 'Unlabeled SKU', manufacturer: 'Yoplait', brand: 'Other' };
+  return { label: cocoClass ?? 'Unlabeled SKU', manufacturer: 'Yoplait', brand: 'Other' };
 }

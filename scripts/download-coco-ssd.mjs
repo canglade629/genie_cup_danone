@@ -5,7 +5,7 @@ import { Readable } from 'node:stream';
 import path from 'node:path';
 
 const BASE = 'https://storage.googleapis.com/tfjs-models/savedmodel/ssdlite_mobilenet_v2';
-const DEST = path.join(process.cwd(), 'server/vision/models/ssdlite_mobilenet_v2');
+const DEST = path.join(process.cwd(), 'client/public/models/ssdlite_mobilenet_v2');
 const FILES = [
   'model.json',
   'group1-shard1of5',

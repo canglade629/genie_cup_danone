@@ -26,6 +26,7 @@ import {
 } from '@databricks/appkit-ui/react';
 import { sql } from '@databricks/appkit-ui/js';
 import { ArrowLeft, Camera, CheckCircle2, GripVertical, Sparkles, Upload, Zap } from 'lucide-react';
+import { detectShelfPhoto } from '@/lib/detect-shelf';
 
 type StoreRow = {
   store_id: string;
@@ -382,19 +383,20 @@ export function StoreDetailPage() {
     });
   };
 
-  const runAnalysis = async (imageData?: string, mimeType?: string, previewUrl?: string, volumePath?: string) => {
+  const runAnalysis = async (imageData?: string, mimeType?: string, previewUrl?: string) => {
     if (!store) return;
     if (previewUrl || imageData) setAnalysisImageUrl(previewUrl ?? imageData ?? null);
     setAnalyzing(true);
     setAnalysisError(null);
     try {
+      const imageSource = imageData ?? previewUrl;
+      const detections = imageSource ? await detectShelfPhoto(imageSource) : undefined;
       const res = await fetch('/api/shelf/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           store_id: store.store_id,
-          image_data: imageData,
-          volume_path: volumePath,
+          detections,
         }),
       });
       if (!res.ok) throw new Error('Analysis failed');
@@ -620,8 +622,7 @@ export function StoreDetailPage() {
                   void runAnalysis(
                     undefined,
                     undefined,
-                    selectedSamplePath ? volumeImageUrl(selectedSamplePath) : (analysisImageUrl ?? undefined),
-                    selectedSamplePath ?? undefined
+                    selectedSamplePath ? volumeImageUrl(selectedSamplePath) : (analysisImageUrl ?? undefined)
                   )
                 }
               >
@@ -678,7 +679,7 @@ export function StoreDetailPage() {
                       }`}
                       onClick={() => {
                         setSelectedSamplePath(path);
-                        void runAnalysis(undefined, undefined, volumeImageUrl(path), path);
+                        void runAnalysis(undefined, undefined, volumeImageUrl(path));
                       }}
                     >
                       <img

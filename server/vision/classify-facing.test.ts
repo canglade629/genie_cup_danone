@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyFacing, rgbToHsl } from './classify-facing';
+import { classifyFacing, rgbToHsl } from '../../shared/vision/classify-facing';
 import { annotateIssues, buildAnalysis, demoDetections } from './analyze-result';
 
 describe('classifyFacing', () => {
