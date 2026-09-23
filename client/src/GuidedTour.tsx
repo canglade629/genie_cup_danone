@@ -248,7 +248,7 @@ export function GuidedTour() {
       <button
         type="button"
         onClick={startTour}
-        className="fixed bottom-5 right-5 z-[90] inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-lg hover:opacity-90"
+        className="fixed bottom-5 left-5 z-[90] inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-lg hover:opacity-90"
         aria-label="Start guided tour"
       >
         <PlayCircle className="h-4 w-4" />

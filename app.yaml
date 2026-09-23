@@ -4,3 +4,7 @@ env:
     valueFrom: sql-warehouse
   - name: LAKEBASE_ENDPOINT
     valueFrom: postgres
+  - name: DATABRICKS_GENIE_SPACE_ID
+    valueFrom: genie-space
+  - name: DATABRICKS_VOLUME_FILES
+    valueFrom: shelf-images

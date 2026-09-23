@@ -66,6 +66,13 @@ type ShelfPhoto = {
   created_at: string;
 };
 
+type VolumeImage = {
+  file_size?: number;
+  is_directory?: boolean;
+  name?: string;
+  path?: string;
+};
+
 type ExternalSignal = {
   signal_id: string;
   source_name: string;
@@ -184,6 +191,18 @@ function manufacturerTone(m: string) {
   return 'border-warning bg-warning/10';
 }
 
+function volumeImageUrl(path: string) {
+  return `/api/files/files/raw?path=${encodeURIComponent(path)}`;
+}
+
+function imageTitle(name: string) {
+  return name
+    .replace(/^shelf-\d+-/, '')
+    .replace(/\.[^.]+$/, '')
+    .replaceAll('-', ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 export function StoreDetailPage() {
   const { storeId = '' } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -201,6 +220,11 @@ export function StoreDetailPage() {
   const [photos, setPhotos] = useState<ShelfPhoto[]>([]);
   const [photosLoading, setPhotosLoading] = useState(true);
   const [photosError, setPhotosError] = useState<string | null>(null);
+  const [sampleImages, setSampleImages] = useState<VolumeImage[]>([]);
+  const [samplesLoading, setSamplesLoading] = useState(true);
+  const [samplesError, setSamplesError] = useState<string | null>(null);
+  const [selectedSamplePath, setSelectedSamplePath] = useState<string | null>(null);
+  const [analysisImageUrl, setAnalysisImageUrl] = useState<string | null>(null);
 
   const [analysis, setAnalysis] = useState<ShelfAnalysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -239,6 +263,29 @@ export function StoreDetailPage() {
   useEffect(() => {
     void loadPhotos();
   }, [loadPhotos]);
+
+  useEffect(() => {
+    const loadSampleImages = async () => {
+      setSamplesLoading(true);
+      setSamplesError(null);
+      try {
+        const res = await fetch('/api/files/files/list');
+        if (!res.ok) throw new Error('Failed to load synthetic shelf images');
+        const entries = (await res.json()) as VolumeImage[];
+        setSampleImages(
+          entries
+            .filter((entry) => !entry.is_directory && entry.name?.match(/\.(png|jpe?g|webp)$/i))
+            .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
+        );
+      } catch (err) {
+        setSamplesError((err as Error).message);
+      } finally {
+        setSamplesLoading(false);
+      }
+    };
+
+    void loadSampleImages();
+  }, []);
 
   const weeklySales = Number(store?.weekly_sales_eur ?? 5000);
   const impact = useMemo(() => computeImpact(layout, weeklySales), [layout, weeklySales]);
@@ -333,8 +380,9 @@ export function StoreDetailPage() {
     });
   };
 
-  const runAnalysis = async (imageData?: string, mimeType?: string) => {
+  const runAnalysis = async (imageData?: string, mimeType?: string, previewUrl?: string) => {
     if (!store) return;
+    if (previewUrl || imageData) setAnalysisImageUrl(previewUrl ?? imageData ?? null);
     setAnalyzing(true);
     try {
       const res = await fetch('/api/shelf/analyze', {
@@ -379,7 +427,8 @@ export function StoreDetailPage() {
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === 'string') {
-        void runAnalysis(reader.result, file.type || 'image/jpeg');
+        setSelectedSamplePath(null);
+        void runAnalysis(reader.result, file.type || 'image/jpeg', reader.result);
       }
     };
     reader.readAsDataURL(file);
@@ -562,6 +611,61 @@ export function StoreDetailPage() {
 
           {uploading && <p className="text-sm text-muted-foreground">Saving photo to Lakebase…</p>}
 
+          <Card>
+            <CardHeader>
+              <CardTitle>Synthetic shelf library</CardTitle>
+              <CardDescription>
+                20 French-market shelf scenes loaded from a governed Unity Catalog volume.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {samplesLoading && <Skeleton className="h-48 w-full" />}
+              {samplesError && (
+                <Alert variant="destructive">
+                  <AlertTitle>Synthetic shelves unavailable</AlertTitle>
+                  <AlertDescription>{samplesError}</AlertDescription>
+                </Alert>
+              )}
+              {!samplesLoading && !samplesError && sampleImages.length === 0 && (
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyTitle>No synthetic shelves found</EmptyTitle>
+                    <EmptyDescription>Upload images to the configured shelf_images volume.</EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {sampleImages.map((image) => {
+                  const path = image.path ?? image.name ?? '';
+                  const selected = selectedSamplePath === path;
+                  return (
+                    <button
+                      key={path}
+                      type="button"
+                      className={`overflow-hidden rounded-md border text-left transition-colors ${
+                        selected ? 'border-primary ring-2 ring-primary/30' : 'hover:border-primary/60'
+                      }`}
+                      onClick={() => {
+                        setSelectedSamplePath(path);
+                        void runAnalysis(undefined, undefined, volumeImageUrl(path));
+                      }}
+                    >
+                      <img
+                        src={volumeImageUrl(path)}
+                        alt={imageTitle(image.name ?? 'Synthetic shelf')}
+                        className="h-32 w-full object-cover bg-muted"
+                        loading="lazy"
+                      />
+                      <span className="block p-2 text-xs font-medium">
+                        {imageTitle(image.name ?? 'Synthetic shelf')}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
           {analysis && (
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
               <Card className="lg:col-span-3">
@@ -571,7 +675,15 @@ export function StoreDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="relative w-full aspect-[16/10] rounded-md border bg-muted overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-b from-muted to-background" />
+                    {analysisImageUrl ? (
+                      <img
+                        src={analysisImageUrl}
+                        alt="Shelf selected for analysis"
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-gradient-to-b from-muted to-background" />
+                    )}
                     {analysis.detections.map((d) => (
                       <div
                         key={d.id}

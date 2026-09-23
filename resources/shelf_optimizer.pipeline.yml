@@ -1,0 +1,15 @@
+resources:
+  pipelines:
+    shelf_optimizer_synthetic_data:
+      name: '[${bundle.target}] Shelf Optimizer Synthetic Data'
+      catalog: ${var.catalog}
+      schema: ${var.schema}
+      root_path: ../src/pipelines/shelf_optimizer
+      libraries:
+        - glob:
+            include: ../src/pipelines/shelf_optimizer/transformations/**
+      serverless: true
+      photon: true
+      continuous: false
+      development: true
+      channel: current

@@ -8,6 +8,8 @@ import { SignalsPage } from './pages/SignalsPage';
 import { FirstConnectionPage, LandingPage } from './pages/LandingPage';
 import { RevenuePage } from './pages/RevenuePage';
 import { ActionsPage } from './pages/ActionsPage';
+import { GeniePage } from './pages/GeniePage';
+import { GenieLauncher } from './GenieLauncher';
 import { GuidedTour } from './GuidedTour';
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -35,9 +37,6 @@ function NavLinks({
     <nav className={className}>
       <NavLink to="/map" className={linkClass} onClick={onClick}>
         Paris map
-      </NavLink>
-      <NavLink to="/map?tour=1" className={() => linkClass({ isActive: false })} onClick={onClick}>
-        Start demo
       </NavLink>
       <NavLink to="/signals" className={linkClass} onClick={onClick}>
         Market signals
@@ -86,6 +85,7 @@ function Layout() {
         <Outlet />
       </main>
       <GuidedTour />
+      <GenieLauncher />
     </div>
   );
 }
@@ -102,6 +102,7 @@ const router = createBrowserRouter([
       { path: '/signals', element: <SignalsPage /> },
       { path: '/revenue', element: <RevenuePage /> },
       { path: '/actions', element: <ActionsPage /> },
+      { path: '/ask', element: <GeniePage /> },
     ],
   },
 ]);

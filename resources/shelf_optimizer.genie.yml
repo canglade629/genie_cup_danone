@@ -1,0 +1,80 @@
+resources:
+  genie_spaces:
+    shelf_optimizer_genie:
+      title: 'Danone Shelf Optimizer'
+      description: 'Ask natural-language questions about Paris store priorities, share of shelf, planogram compliance, external demand signals, and estimated revenue lift.'
+      warehouse_id: ${var.sql_warehouse_id}
+      parent_path: /Workspace/Users/${workspace.current_user.userName}
+      serialized_space:
+        version: 2
+        config:
+          sample_questions:
+            - id: '10000000000000000000000000000001'
+              question:
+                - Which stores should a sales representative visit first, and why?
+            - id: '10000000000000000000000000000002'
+              question:
+                - Where are the largest estimated weekly revenue lift opportunities?
+            - id: '10000000000000000000000000000003'
+              question:
+                - How does Danone share of shelf compare with competitors and out-of-stock slots?
+            - id: '10000000000000000000000000000004'
+              question:
+                - Which external signals should change assortment or product placement this week?
+        data_sources:
+          tables:
+            - identifier: ${var.catalog}.${var.schema}.external_signals
+            - identifier: ${var.catalog}.${var.schema}.planogram_slots
+            - identifier: ${var.catalog}.${var.schema}.sku_lift_assumptions
+            - identifier: ${var.catalog}.${var.schema}.stores
+        instructions:
+          example_question_sqls:
+            - id: '20000000000000000000000000000001'
+              question:
+                - Which stores should a sales representative visit first?
+              sql:
+                - "SELECT store_name, city, priority_tier, priority_score, ROUND(danone_sos_pct * 100, 1) AS danone_sos_pct, compliance_pct, weekly_sales_eur, situation_summary\n"
+                - "FROM ${var.catalog}.${var.schema}.stores\n"
+                - 'ORDER BY priority_score DESC'
+            - id: '20000000000000000000000000000002'
+              question:
+                - What is Danone's share of shelf versus competitors and out-of-stock slots?
+              sql:
+                - "SELECT manufacturer, COUNT(*) AS facings, ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 1) AS share_of_shelf_pct,\n"
+                - "       SUM(CASE WHEN shelf_zone = 'eye' THEN 1 ELSE 0 END) AS eye_level_facings\n"
+                - "FROM ${var.catalog}.${var.schema}.planogram_slots\n"
+                - 'GROUP BY manufacturer ORDER BY facings DESC'
+            - id: '20000000000000000000000000000003'
+              question:
+                - Which external demand signals require action now?
+              sql:
+                - "SELECT s.store_name, e.source_name, e.signal_summary, e.signal_score, e.demand_theme,\n"
+                - "       e.recommended_action, e.expected_impact, e.urgency, e.valid_from, e.valid_to\n"
+                - "FROM ${var.catalog}.${var.schema}.external_signals e\n"
+                - "JOIN ${var.catalog}.${var.schema}.stores s ON e.store_id = s.store_id\n"
+                - "WHERE current_date() BETWEEN e.valid_from AND e.valid_to\n"
+                - 'ORDER BY e.signal_score DESC'
+            - id: '20000000000000000000000000000004'
+              question:
+                - Where are the largest estimated weekly revenue lift opportunities?
+              sql:
+                - "WITH shelf AS (\n"
+                - "  SELECT store_id, COUNT(*) AS slots,\n"
+                - "         SUM(CASE WHEN manufacturer = 'Empty' THEN 1 ELSE 0 END) AS empty_slots,\n"
+                - "         SUM(CASE WHEN manufacturer = 'Danone' AND shelf_zone != 'eye' THEN 1 ELSE 0 END) AS danone_below_eye\n"
+                - "  FROM ${var.catalog}.${var.schema}.planogram_slots GROUP BY store_id\n"
+                - ")\n"
+                - "SELECT s.store_name,\n"
+                - "       ROUND(s.weekly_sales_eur * 0.03 * sh.empty_slots / sh.slots\n"
+                - "         + s.weekly_sales_eur * 0.12 * sh.danone_below_eye / sh.slots\n"
+                - "         + s.weekly_sales_eur * 0.05 * (100 - s.compliance_pct) / 100.0, 0) AS estimated_weekly_lift_eur\n"
+                - "FROM ${var.catalog}.${var.schema}.stores s JOIN shelf sh ON s.store_id = sh.store_id\n"
+                - 'ORDER BY estimated_weekly_lift_eur DESC'
+          text_instructions:
+            - id: '30000000000000000000000000000001'
+              content:
+                - "You are a retail execution analyst helping Danone field sales representatives prioritize store visits and actions.\n"
+                - "Use stores as the hub table and join external_signals or planogram_slots on store_id. A higher priority_score means a more urgent visit. danone_sos_pct is stored as a ratio from 0 to 1; multiply by 100 only when presenting it as a percentage. compliance_pct and signal_score are stored from 0 to 100.\n"
+                - "In planogram_slots, manufacturer = 'Empty' means an out-of-stock shelf slot. Danone rows are own-brand facings; all other non-empty manufacturers are competitors. Eye-level positions have shelf_zone = 'eye'.\n"
+                - "For opportunity estimates, use the strategy assumptions: eye-level move 12%, promo compliance 5%, cross-merchandising 4%, and OOS restock 3%. Apply lifts proportionally to the affected facings or compliance gap, and clearly label all lift values as estimates.\n"
+                - 'Treat an external signal as active when current_date() is between valid_from and valid_to. Explain what changed, which store is affected, the recommended action, and expected impact. Keep answers concise, rank stores or actions when possible, and include the evidence behind each recommendation.'

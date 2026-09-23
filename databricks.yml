@@ -1,7 +1,16 @@
 bundle:
   name: shelf-optimizer
 
+include:
+  - resources/*.yml
+
 variables:
+  catalog:
+    description: Unity Catalog catalog containing shelf optimizer data
+    default: serverless_stable_6hzlm4_catalog
+  schema:
+    description: Unity Catalog schema containing shelf optimizer data
+    default: shelf_optimizer
   sql_warehouse_id:
     description: SQL Warehouse ID
   postgres_branch:
@@ -21,9 +30,8 @@ resources:
       # Start the app automatically on deploy.
       lifecycle:
         started: true
-      # Uncomment to enable on behalf of user API scopes. Available scopes: sql, dashboards.genie, files.files, serving.serving-endpoints
-      # user_api_scopes:
-      #   - sql
+      user_api_scopes:
+        - dashboards.genie
 
       # The resources which this app has access to.
       resources:
@@ -36,6 +44,16 @@ resources:
             branch: ${var.postgres_branch}
             database: ${var.postgres_database}
             permission: CAN_CONNECT_AND_CREATE
+        - name: genie-space
+          genie_space:
+            name: 'Shelf Optimizer Assistant'
+            space_id: ${resources.genie_spaces.shelf_optimizer_genie.id}
+            permission: CAN_RUN
+        - name: shelf-images
+          uc_securable:
+            securable_full_name: ${var.catalog}.${var.schema}.shelf_images
+            securable_type: VOLUME
+            permission: READ_VOLUME
 
 targets:
   default:
@@ -44,6 +62,8 @@ targets:
       host: https://fevm-serverless-stable-6hzlm4.cloud.databricks.com
 
     variables:
+      catalog: serverless_stable_6hzlm4_catalog
+      schema: shelf_optimizer
       sql_warehouse_id: 5b025499976234e9
       postgres_branch: projects/shelf-optimizer/branches/production
       postgres_database: projects/shelf-optimizer/branches/production/databases/databricks-postgres

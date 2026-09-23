@@ -1,0 +1,9 @@
+resources:
+  dashboards:
+    shelf_optimizer_dashboard:
+      display_name: 'Danone Shelf Optimizer — Retail Execution'
+      file_path: ../src/dashboards/shelf_optimizer.lvdash.json
+      warehouse_id: ${var.sql_warehouse_id}
+      dataset_catalog: ${var.catalog}
+      dataset_schema: ${var.schema}
+      parent_path: /Workspace/Users/${workspace.current_user.userName}

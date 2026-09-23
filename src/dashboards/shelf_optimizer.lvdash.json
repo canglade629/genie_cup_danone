@@ -1,0 +1,776 @@
+{
+  "datasets": [
+    {
+      "name": "ds_summary",
+      "displayName": "Portfolio summary",
+      "queryLines": [
+        "SELECT COUNT(*) AS total_stores,\n",
+        "       SUM(CASE WHEN priority_tier IN ('critical', 'high') THEN 1 ELSE 0 END) AS urgent_stores,\n",
+        "       ROUND(AVG(danone_sos_pct), 3) AS avg_danone_sos,\n",
+        "       ROUND(AVG(compliance_pct) / 100.0, 3) AS avg_compliance\n",
+        "FROM stores"
+      ]
+    },
+    {
+      "name": "ds_stores",
+      "displayName": "Store priorities",
+      "queryLines": [
+        "SELECT store_id, store_name, city, retailer, format, lat, lng,\n",
+        "       priority_tier, priority_score, danone_sos_pct,\n",
+        "       compliance_pct, weekly_sales_eur, situation_summary\n",
+        "FROM stores\n",
+        "ORDER BY priority_score DESC"
+      ]
+    },
+    {
+      "name": "ds_lift",
+      "displayName": "Estimated revenue lift",
+      "queryLines": [
+        "WITH shelf AS (\n",
+        "  SELECT store_id, COUNT(*) AS total_slots,\n",
+        "         SUM(CASE WHEN manufacturer = 'Empty' THEN 1 ELSE 0 END) AS empty_slots,\n",
+        "         SUM(CASE WHEN manufacturer = 'Danone' AND shelf_zone != 'eye' THEN 1 ELSE 0 END) AS danone_below_eye\n",
+        "  FROM planogram_slots GROUP BY store_id\n",
+        ")\n",
+        "SELECT s.store_name, s.priority_tier,\n",
+        "       ROUND(s.weekly_sales_eur * 0.03 * sh.empty_slots / sh.total_slots, 0) AS oos_lift_eur,\n",
+        "       ROUND(s.weekly_sales_eur * 0.12 * sh.danone_below_eye / sh.total_slots, 0) AS eye_level_lift_eur,\n",
+        "       ROUND(s.weekly_sales_eur * 0.05 * (100 - s.compliance_pct) / 100.0, 0) AS compliance_lift_eur\n",
+        "FROM stores s JOIN shelf sh ON s.store_id = sh.store_id\n",
+        "ORDER BY oos_lift_eur + eye_level_lift_eur + compliance_lift_eur DESC"
+      ]
+    },
+    {
+      "name": "ds_shelf",
+      "displayName": "Share of shelf",
+      "queryLines": [
+        "SELECT manufacturer, COUNT(*) AS facings,\n",
+        "       ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 1) AS share_of_shelf_pct,\n",
+        "       SUM(CASE WHEN shelf_zone = 'eye' THEN 1 ELSE 0 END) AS eye_level_facings\n",
+        "FROM planogram_slots\n",
+        "GROUP BY manufacturer ORDER BY facings DESC"
+      ]
+    },
+    {
+      "name": "ds_signals",
+      "displayName": "External demand signals",
+      "queryLines": [
+        "SELECT s.store_name, s.priority_tier, e.source_name, e.signal_summary,\n",
+        "       e.signal_score, e.demand_theme, e.recommended_action,\n",
+        "       e.expected_impact, e.urgency, e.valid_from, e.valid_to\n",
+        "FROM external_signals e JOIN stores s ON e.store_id = s.store_id\n",
+        "ORDER BY e.signal_score DESC"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "overview",
+      "displayName": "Retail execution",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "title",
+            "multilineTextboxSpec": {
+              "lines": ["## Danone Shelf Optimizer"]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "subtitle",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Prioritize Paris store visits, connect shelf execution with external demand signals, and quantify the weekly value of recommended actions."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-total-stores",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_summary",
+                  "fields": [
+                    {
+                      "name": "total_stores",
+                      "expression": "`total_stores`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "total_stores",
+                  "displayName": "Paris stores"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Stores monitored"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-urgent-stores",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_summary",
+                  "fields": [
+                    {
+                      "name": "urgent_stores",
+                      "expression": "`urgent_stores`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "urgent_stores",
+                  "displayName": "Critical + high"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Priority visits"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-share-of-shelf",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_summary",
+                  "fields": [
+                    {
+                      "name": "avg_danone_sos",
+                      "expression": "`avg_danone_sos`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "avg_danone_sos",
+                  "displayName": "Average SoS",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Danone share of shelf"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-compliance",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_summary",
+                  "fields": [
+                    {
+                      "name": "avg_compliance",
+                      "expression": "`avg_compliance`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "avg_compliance",
+                  "displayName": "Average compliance",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Planogram compliance"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "store-priority-ranking",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_stores",
+                  "fields": [
+                    {
+                      "name": "store_name",
+                      "expression": "`store_name`"
+                    },
+                    {
+                      "name": "priority_score",
+                      "expression": "`priority_score`"
+                    },
+                    {
+                      "name": "priority_tier",
+                      "expression": "`priority_tier`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "priority_score",
+                  "displayName": "Priority score",
+                  "scale": {
+                    "type": "quantitative",
+                    "domainMin": 0,
+                    "domainMax": 100
+                  }
+                },
+                "y": {
+                  "fieldName": "store_name",
+                  "displayName": "Store",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "value",
+                      "direction": "DESC"
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "priority_tier",
+                  "displayName": "Priority",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "critical",
+                        "color": "#FF3621"
+                      },
+                      {
+                        "value": "high",
+                        "color": "#FFAB00"
+                      },
+                      {
+                        "value": "medium",
+                        "color": "#2272B4"
+                      },
+                      {
+                        "value": "low",
+                        "color": "#00A972"
+                      }
+                    ]
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Where should the rep go first?"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "store-priority-map",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_stores",
+                  "fields": [
+                    {
+                      "name": "lat",
+                      "expression": "`lat`"
+                    },
+                    {
+                      "name": "lng",
+                      "expression": "`lng`"
+                    },
+                    {
+                      "name": "priority_score",
+                      "expression": "`priority_score`"
+                    },
+                    {
+                      "name": "weekly_sales_eur",
+                      "expression": "`weekly_sales_eur`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "symbol-map",
+              "mark": {
+                "opacity": 0.8
+              },
+              "encodings": {
+                "coordinates": {
+                  "latitude": {
+                    "fieldName": "lat"
+                  },
+                  "longitude": {
+                    "fieldName": "lng"
+                  }
+                },
+                "color": {
+                  "fieldName": "priority_score",
+                  "displayName": "Priority score",
+                  "scale": {
+                    "type": "quantitative",
+                    "colorRamp": {
+                      "mode": "custom-sequential",
+                      "colors": {
+                        "start": "#00A972",
+                        "end": "#FF3621"
+                      }
+                    }
+                  }
+                },
+                "size": {
+                  "fieldName": "weekly_sales_eur",
+                  "displayName": "Weekly sales",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Paris opportunity map"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 5,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "estimated-lift",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_lift",
+                  "fields": [
+                    {
+                      "name": "store_name",
+                      "expression": "`store_name`"
+                    },
+                    {
+                      "name": "oos_lift_eur",
+                      "expression": "`oos_lift_eur`"
+                    },
+                    {
+                      "name": "eye_level_lift_eur",
+                      "expression": "`eye_level_lift_eur`"
+                    },
+                    {
+                      "name": "compliance_lift_eur",
+                      "expression": "`compliance_lift_eur`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "store_name",
+                  "displayName": "Store",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "oos_lift_eur",
+                      "displayName": "OOS recovery",
+                      "format": {
+                        "type": "number-currency",
+                        "currencyCode": "EUR",
+                        "decimalPlaces": {
+                          "type": "exact",
+                          "places": 0
+                        }
+                      }
+                    },
+                    {
+                      "fieldName": "eye_level_lift_eur",
+                      "displayName": "Eye-level move",
+                      "format": {
+                        "type": "number-currency",
+                        "currencyCode": "EUR",
+                        "decimalPlaces": {
+                          "type": "exact",
+                          "places": 0
+                        }
+                      }
+                    },
+                    {
+                      "fieldName": "compliance_lift_eur",
+                      "displayName": "Compliance recovery",
+                      "format": {
+                        "type": "number-currency",
+                        "currencyCode": "EUR",
+                        "decimalPlaces": {
+                          "type": "exact",
+                          "places": 0
+                        }
+                      }
+                    }
+                  ]
+                },
+                "label": {
+                  "show": false
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Estimated weekly revenue lift by action"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "share-of-shelf",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_shelf",
+                  "fields": [
+                    {
+                      "name": "manufacturer",
+                      "expression": "`manufacturer`"
+                    },
+                    {
+                      "name": "share_of_shelf_pct",
+                      "expression": "`share_of_shelf_pct`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "share_of_shelf_pct",
+                  "displayName": "Share of shelf (%)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "formatTemplate": "{{@}}%"
+                },
+                "y": {
+                  "fieldName": "manufacturer",
+                  "displayName": "Manufacturer",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "color": {
+                  "fieldName": "manufacturer",
+                  "displayName": "Manufacturer",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Danone",
+                        "color": "#0072B2"
+                      },
+                      {
+                        "value": "Empty",
+                        "color": "#919191"
+                      },
+                      {
+                        "value": "Yoplait",
+                        "color": "#D55E00"
+                      },
+                      {
+                        "value": "Nestlé",
+                        "color": "#E69F00"
+                      }
+                    ]
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Danone vs competitors and OOS"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 11,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "signals-header",
+            "multilineTextboxSpec": {
+              "lines": ["### External signals → store actions"]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 17,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "signals-table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_signals",
+                  "fields": [
+                    {
+                      "name": "store_name",
+                      "expression": "`store_name`"
+                    },
+                    {
+                      "name": "source_name",
+                      "expression": "`source_name`"
+                    },
+                    {
+                      "name": "signal_summary",
+                      "expression": "`signal_summary`"
+                    },
+                    {
+                      "name": "signal_score",
+                      "expression": "`signal_score`"
+                    },
+                    {
+                      "name": "demand_theme",
+                      "expression": "`demand_theme`"
+                    },
+                    {
+                      "name": "recommended_action",
+                      "expression": "`recommended_action`"
+                    },
+                    {
+                      "name": "expected_impact",
+                      "expression": "`expected_impact`"
+                    },
+                    {
+                      "name": "urgency",
+                      "expression": "`urgency`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "store_name",
+                    "displayName": "Store"
+                  },
+                  {
+                    "fieldName": "source_name",
+                    "displayName": "Signal source"
+                  },
+                  {
+                    "fieldName": "signal_summary",
+                    "displayName": "What changed"
+                  },
+                  {
+                    "fieldName": "signal_score",
+                    "displayName": "Score"
+                  },
+                  {
+                    "fieldName": "demand_theme",
+                    "displayName": "Demand theme"
+                  },
+                  {
+                    "fieldName": "recommended_action",
+                    "displayName": "Recommended action"
+                  },
+                  {
+                    "fieldName": "expected_impact",
+                    "displayName": "Expected impact"
+                  },
+                  {
+                    "fieldName": "urgency",
+                    "displayName": "Urgency"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Demand intelligence action queue"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 18,
+            "width": 12,
+            "height": 7
+          }
+        }
+      ]
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "canvasBackgroundColor": {
+        "light": "#F6F8FB",
+        "dark": "#18212A"
+      },
+      "widgetBackgroundColor": {
+        "light": "#FFFFFF",
+        "dark": "#11171C"
+      },
+      "widgetBorderColor": {
+        "light": "#FFFFFF",
+        "dark": "#11171C"
+      },
+      "fontColor": {
+        "light": "#13233A",
+        "dark": "#E8ECF0"
+      },
+      "selectionColor": {
+        "light": "#0072B2",
+        "dark": "#56B4E9"
+      },
+      "visualizationColors": ["#0072B2", "#E69F00", "#009E73", "#CC79A7", "#D55E00", "#56B4E9", "#F0E442"],
+      "widgetHeaderAlignment": "LEFT",
+      "fontFamily": "Inter",
+      "widgetCornerRadius": 10
+    }
+  }
+}

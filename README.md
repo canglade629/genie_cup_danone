@@ -145,13 +145,33 @@ Make sure to replace all placeholder values in `databricks.yml` with your actual
 
 ### 2. Deploy
 
-Deploy and start the app with a single command:
+Deploy the app, synthetic-data pipeline, Genie space, and AI/BI dashboard together:
 
 ```bash
-databricks apps deploy
+databricks bundle validate --strict -t default --profile FEVM
+databricks bundle deploy -t default --profile FEVM
+databricks bundle run shelf_optimizer_synthetic_data -t default --profile FEVM
 ```
 
-`databricks apps deploy` validates the project, deploys it, starts the app, and prints its URL.
+The bundle deploys and starts the app, creates or updates the **Danone Shelf Optimizer**
+Genie space, publishes the **Danone Shelf Optimizer — Retail Execution** dashboard, and
+installs a serverless Lakeflow Declarative Pipeline that recreates the synthetic
+`stores`, `planogram_slots`, `external_signals`, and `sku_lift_assumptions` datasets.
+The app exposes the Genie space under **Ask Genie** and runs questions on behalf of the
+signed-in user.
+
+The four synthetic tables were originally created manually. Before the first pipeline
+run in an existing workspace, remove those disposable legacy tables once so the
+pipeline can take ownership of their names:
+
+```sql
+DROP TABLE IF EXISTS serverless_stable_6hzlm4_catalog.shelf_optimizer.stores;
+DROP TABLE IF EXISTS serverless_stable_6hzlm4_catalog.shelf_optimizer.planogram_slots;
+DROP TABLE IF EXISTS serverless_stable_6hzlm4_catalog.shelf_optimizer.external_signals;
+DROP TABLE IF EXISTS serverless_stable_6hzlm4_catalog.shelf_optimizer.sku_lift_assumptions;
+```
+
+Run `databricks bundle summary -t default --profile FEVM` to print all resource URLs.
 
 ### Deploy to Production
 
@@ -159,7 +179,8 @@ databricks apps deploy
 2. Deploy to production:
 
 ```bash
-databricks apps deploy -t prod
+databricks bundle validate --strict -t prod --profile production
+databricks bundle deploy -t prod --profile production
 ```
 
 > **Restarting a stopped app:** apps stop after a period of inactivity. To start one again without redeploying, run `databricks apps start <APP_NAME>`.
@@ -176,6 +197,8 @@ databricks apps deploy -t prod
 * shared/          # Shared types
 * config/          # Configuration
   * queries/       # SQL query files
+* resources/       # Bundle-managed pipeline, Genie space, and dashboard
+* src/pipelines/   # Synthetic Lakeflow pipeline SQL
 * databricks.yml   # Bundle configuration
 * app.yaml         # App configuration
 * .env.example     # Environment variables example

@@ -138,7 +138,8 @@
             "Before init, verify your Unity Catalog volume exists and you have WRITE_VOLUME permission"
           ]
         }
-      }
+      },
+      "requiredByTemplate": true
     },
     "genie": {
       "name": "genie",
@@ -178,7 +179,8 @@
             "After init, configure the 'spaces' map in plugin config with alias-to-Space-ID mappings"
           ]
         }
-      }
+      },
+      "requiredByTemplate": true
     },
     "jobs": {
       "name": "jobs",
