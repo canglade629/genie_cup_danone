@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { ArrowLeft, ArrowRight, Check, PlayCircle, X } from 'lucide-react';
@@ -66,7 +66,7 @@ const TOUR_STEPS: TourStep[] = [
     eyebrow: 'Observe execution',
     title: 'Analyze a new shelf photo',
     explanation:
-      'The rep can capture or upload a shelf image to detect competitors, OOS voids, wrong placement, and missing promotional tags.',
+      'The rep can capture or upload a shelf image. TensorFlow.js COCO-SSD plus color analysis detect competitors, OOS voids, wrong placement, and missing promotional tags.',
     businessValue:
       'Faster OOS correction can recover 2–4% of total sales, while promo verification protects trade-spend ROI.',
   },
@@ -126,11 +126,35 @@ export function GuidedTour() {
 
   const step = TOUR_STEPS[stepIndex];
 
+  const finish = useCallback(() => {
+    setActive(false);
+    setTargetRect(null);
+    window.localStorage.setItem('shelf-optimizer-tour-completed', '1');
+    void navigate(location.pathname, { replace: true });
+  }, [location.pathname, navigate]);
+
+  const next = useCallback(() => {
+    if (stepIndex === TOUR_STEPS.length - 1) {
+      finish();
+      return;
+    }
+    setTargetRect(null);
+    setStepIndex((current) => current + 1);
+  }, [finish, stepIndex]);
+
+  const previous = useCallback(() => {
+    if (stepIndex === 0) return;
+    setTargetRect(null);
+    setStepIndex((current) => current - 1);
+  }, [stepIndex]);
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('tour') === '1') {
-      setStepIndex(0);
-      setActive(true);
+      queueMicrotask(() => {
+        setStepIndex(0);
+        setActive(true);
+      });
     }
   }, [location.search]);
 
@@ -139,7 +163,6 @@ export function GuidedTour() {
 
     const expected = new URL(step.route, window.location.origin);
     if (location.pathname !== expected.pathname || location.search !== expected.search) {
-      setTargetRect(null);
       void navigate(`${expected.pathname}${expected.search}`, { replace: true });
       return;
     }
@@ -211,7 +234,7 @@ export function GuidedTour() {
       window.removeEventListener('scroll', update, true);
       window.removeEventListener('keydown', onKeyDown);
     };
-  });
+  }, [active, finish, next, previous, step.selector]);
 
   const panelStyle = useMemo<CSSProperties>(() => {
     if (typeof window === 'undefined' || window.innerWidth < 640) {
@@ -255,28 +278,6 @@ export function GuidedTour() {
         Guided tour
       </button>
     );
-  }
-
-  function finish() {
-    setActive(false);
-    setTargetRect(null);
-    window.localStorage.setItem('shelf-optimizer-tour-completed', '1');
-    void navigate(location.pathname, { replace: true });
-  }
-
-  function next() {
-    if (stepIndex === TOUR_STEPS.length - 1) {
-      finish();
-      return;
-    }
-    setTargetRect(null);
-    setStepIndex((current) => current + 1);
-  }
-
-  function previous() {
-    if (stepIndex === 0) return;
-    setTargetRect(null);
-    setStepIndex((current) => current - 1);
   }
 
   return (

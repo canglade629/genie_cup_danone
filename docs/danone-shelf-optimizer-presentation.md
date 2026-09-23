@@ -2,7 +2,7 @@
 
 Field-sales decision support for retail execution: prioritize stores, diagnose the shelf, recommend the next action, and quantify weekly euro impact.
 
-> **Prototype note:** This is a working Paris-pilot Databricks App. Store priority, signals, planograms, and sell-out come from Unity Catalog. Shelf “vision” and next-best-action payloads are deterministic demo logic. Databricks Model Serving is the documented production upgrade, not a live integration.
+> **Prototype note:** This is a working Paris-pilot Databricks App. Store priority, signals, planograms, and sell-out come from Unity Catalog. Shelf vision runs TensorFlow.js COCO-SSD (with a color/grid fallback) on the selected photo. Databricks Model Serving remains the documented production-scale upgrade.
 
 ---
 
@@ -85,7 +85,7 @@ Accepting the NBA persists store, recommendation, rationale, projected lift, est
 - Consistent recommendations
 - An auditable decision record
 
-**Caveat:** analysis does not currently run a vision model on pixels. Production path is Databricks Model Serving (multimodal LLM or YOLO-class detector).
+**Caveat:** photo analysis runs TensorFlow.js COCO-SSD (plus color/grid fallback) in the app. Databricks Model Serving (YOLO / multimodal) remains the production-scale path.
 
 ### 1.5 Track shelf evolution
 
@@ -103,12 +103,12 @@ The virtual planogram shows row, column, SKU, brand, manufacturer, margin, promo
 
 Projected weekly impact is split into four levers (prototype assumptions):
 
-| Lever | Stated effect |
-| --- | --- |
-| OOS reduction | 2–4% total sales recovery by restocking voids |
-| Eye-level placement | 10–15% SKU lift in the 1.2–1.6 m strike zone |
-| Trade-spend compliance | Recovery when paid tags / end-caps are verified |
-| Cross-merchandising | Basket uplift (e.g. dairy next to granola / berries) |
+| Lever                  | Stated effect                                        |
+| ---------------------- | ---------------------------------------------------- |
+| OOS reduction          | 2–4% total sales recovery by restocking voids        |
+| Eye-level placement    | 10–15% SKU lift in the 1.2–1.6 m strike zone         |
+| Trade-spend compliance | Recovery when paid tags / end-caps are verified      |
+| Cross-merchandising    | Basket uplift (e.g. dairy next to granola / berries) |
 
 A representative NBA in the demo uses **+12%** projected lift.
 
@@ -124,11 +124,11 @@ Joining accepted actions to subsequent sell-out is the natural production extens
 
 ### 1.9 Who uses it
 
-| Persona | Role in the app |
-| --- | --- |
-| Field sales / retail execution reps | Primary users: map, store brief, photo, sandbox, accept NBA |
-| Sales / execution managers | Audit trail of accepted actions and projected weekly € |
-| Category / commercial stakeholders | Revenue impact page: MAT brand sales, manufacturer share, lift assumptions |
+| Persona                             | Role in the app                                                            |
+| ----------------------------------- | -------------------------------------------------------------------------- |
+| Field sales / retail execution reps | Primary users: map, store brief, photo, sandbox, accept NBA                |
+| Sales / execution managers          | Audit trail of accepted actions and projected weekly €                     |
+| Category / commercial stakeholders  | Revenue impact page: MAT brand sales, manufacturer share, lift assumptions |
 
 There is a single app with no role-based access in the current code.
 
@@ -138,15 +138,15 @@ There is a single app with no role-based access in the current code.
 
 ### 2.1 Implemented (claim these)
 
-| Layer | What it does in this app |
-| --- | --- |
-| **Databricks Apps** | Hosted runtime for the rep-facing application |
-| **AppKit 0.57** | Backend SDK + UI: plugins, typed SQL, charts/tables, warehouse readiness |
-| **AppKit plugins** | `analytics()`, `lakebase()`, `server()` only |
-| **SQL Warehouse** | Executes registered SQL against Unity Catalog (`CAN_USE`) |
-| **Unity Catalog / Delta** | Governed analytics: stores, signals, planograms, lift assumptions, sell-out |
-| **Lakebase Postgres** | OLTP for photos, accepted recommendations, simulations (`CAN_CONNECT_AND_CREATE`) |
-| **Asset Bundles + Apps deploy** | `databricks.yml` / `app.yaml`; `databricks apps deploy` |
+| Layer                           | What it does in this app                                                          |
+| ------------------------------- | --------------------------------------------------------------------------------- |
+| **Databricks Apps**             | Hosted runtime for the rep-facing application                                     |
+| **AppKit 0.57**                 | Backend SDK + UI: plugins, typed SQL, charts/tables, warehouse readiness          |
+| **AppKit plugins**              | `analytics()`, `lakebase()`, `server()` only                                      |
+| **SQL Warehouse**               | Executes registered SQL against Unity Catalog (`CAN_USE`)                         |
+| **Unity Catalog / Delta**       | Governed analytics: stores, signals, planograms, lift assumptions, sell-out       |
+| **Lakebase Postgres**           | OLTP for photos, accepted recommendations, simulations (`CAN_CONNECT_AND_CREATE`) |
+| **Asset Bundles + Apps deploy** | `databricks.yml` / `app.yaml`; `databricks apps deploy`                           |
 
 **Analytical tables** (`serverless_stable_6hzlm4_catalog`):
 
@@ -171,7 +171,7 @@ React (AppKit UI)
   ├─ useAnalyticsQuery / BarChart / DataTable / DonutChart
   │     → AppKit Analytics → SQL Warehouse → UC Delta
   └─ fetch /api/*
-        ├─ POST /api/shelf/analyze  → in-process demo heuristics
+        ├─ POST /api/shelf/analyze  → TensorFlow.js COCO-SSD (+ pixel fallback)
         └─ recommendations / photos / simulations → Lakebase
 ```
 
@@ -238,14 +238,14 @@ The opportunity is broader than compliance: availability, visibility, premium mi
 
 **On slide**
 
-1. Prioritize stores  
-2. Understand local demand  
-3. Analyze shelf execution  
-4. Recommend NBA  
-5. Simulate a better shelf  
-6. Quantify impact  
-7. Save the decision  
-8. Measure future outcomes  
+1. Prioritize stores
+2. Understand local demand
+3. Analyze shelf execution
+4. Recommend NBA
+5. Simulate a better shelf
+6. Quantify impact
+7. Save the decision
+8. Measure future outcomes
 
 **Notes**
 
@@ -372,12 +372,12 @@ Immediate:
 
 Production:
 
-1. Real photo inference via Model Serving  
-2. Automated signal ingestion  
-3. Join accepted actions to subsequent sell-out  
-4. Validate lift with matched-store tests  
-5. Rep / manager access policies  
-6. Scale beyond Paris  
+1. Real photo inference via Model Serving
+2. Automated signal ingestion
+3. Join accepted actions to subsequent sell-out
+4. Validate lift with matched-store tests
+5. Rep / manager access policies
+6. Scale beyond Paris
 
 **Close**
 
@@ -387,12 +387,12 @@ Shelf Optimizer turns Danone’s data advantage into an execution advantage—on
 
 ## 4. Screens (for demo order)
 
-| Order | Route | What to show |
-| --- | --- | --- |
-| 1 | `/welcome` | Value proposition and Databricks architecture strip |
-| 2 | `/map` or `/map?tour=1` | Priority map, KPIs, signal strip, visit queue |
-| 3 | `/signals` | Demand families → recommended shelf actions |
-| 4 | `/stores/:storeId` photos | Brief, signals, upload/analyze, NBA accept, history |
-| 5 | `/stores/:storeId?tab=sandbox` | Drag layout, live €, save simulation |
-| 6 | `/revenue` | MAT brand sales, manufacturer share, lift assumptions |
-| 7 | `/actions` | Decision log and projected weekly € from accepted NBAs |
+| Order | Route                          | What to show                                           |
+| ----- | ------------------------------ | ------------------------------------------------------ |
+| 1     | `/welcome`                     | Value proposition and Databricks architecture strip    |
+| 2     | `/map` or `/map?tour=1`        | Priority map, KPIs, signal strip, visit queue          |
+| 3     | `/signals`                     | Demand families → recommended shelf actions            |
+| 4     | `/stores/:storeId` photos      | Brief, signals, upload/analyze, NBA accept, history    |
+| 5     | `/stores/:storeId?tab=sandbox` | Drag layout, live €, save simulation                   |
+| 6     | `/revenue`                     | MAT brand sales, manufacturer share, lift assumptions  |
+| 7     | `/actions`                     | Decision log and projected weekly € from accepted NBAs |

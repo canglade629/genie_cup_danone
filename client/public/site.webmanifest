@@ -1,6 +1,6 @@
 {
-  "name": "shelf-optimizer",
-  "short_name": "shelf-optimizer",
+  "name": "Danone Shelf Optimizer",
+  "short_name": "Shelf Optimizer",
   "icons": [
     {
       "src": "/favicon-192x192.png",
@@ -13,7 +13,7 @@
       "type": "image/png"
     }
   ],
-  "theme_color": "#ffffff",
+  "theme_color": "#0046a8",
   "background_color": "#ffffff",
   "display": "standalone"
 }

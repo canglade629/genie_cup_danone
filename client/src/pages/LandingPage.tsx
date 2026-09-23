@@ -20,19 +20,21 @@ export function LandingPage() {
 
   const enter = (path: string) => {
     window.localStorage.setItem(WELCOME_KEY, '1');
-    navigate(path);
+    void navigate(path);
   };
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-8">
-      <section className="relative overflow-hidden rounded-xl border bg-primary/10 px-6 py-10 md:px-10 md:py-14">
+      <section className="danone-hero relative overflow-hidden rounded-2xl border border-primary/20 px-6 py-10 shadow-xl shadow-primary/10 md:px-10 md:py-14">
         <div className="relative z-10 max-w-3xl space-y-5">
-          <Badge variant="secondary">AI-powered retail execution · Paris pilot</Badge>
+          <Badge className="border-white/20 bg-white/15 text-white hover:bg-white/20">
+            Danone AI-powered retail execution · Paris pilot
+          </Badge>
           <div className="space-y-3">
-            <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-foreground">
+            <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-white">
               Turn every shelf photo into the next best sales action.
             </h2>
-            <p className="text-base md:text-lg text-muted-foreground max-w-2xl">
+            <p className="text-base md:text-lg text-white/80 max-w-2xl">
               Shelf Optimizer helps field reps prioritize stores, understand local demand, detect execution gaps,
               simulate a better shelf, and quantify the euro impact before leaving.
             </p>
@@ -42,7 +44,7 @@ export function LandingPage() {
             <button
               type="button"
               onClick={() => enter('/map?tour=1')}
-              className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-primary shadow-sm transition-transform hover:-translate-y-0.5"
             >
               <PlayCircle className="h-4 w-4" />
               Start guided walkthrough
@@ -50,20 +52,17 @@ export function LandingPage() {
             <button
               type="button"
               onClick={() => enter('/map')}
-              className="inline-flex items-center justify-center gap-2 rounded-md border bg-background px-5 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-white/35 bg-white/10 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/20"
             >
               Explore the Paris map
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
 
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-white/65">
             Recommended for first-time users: the interactive tour navigates the app and highlights each key feature.
           </p>
         </div>
-
-        <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-primary/10" />
-        <div className="absolute right-20 -bottom-24 h-56 w-56 rounded-full bg-success/10" />
       </section>
 
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4">

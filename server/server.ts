@@ -27,8 +27,7 @@ await createApp({
     setupShelfRoutes(appkit);
     appkit.server.extend((app) => {
       app.get('/api/whoami', (req, res) => {
-        const forwardedIdentity =
-          req.header('x-forwarded-email') ?? req.header('x-forwarded-user') ?? null;
+        const forwardedIdentity = req.header('x-forwarded-email') ?? req.header('x-forwarded-user') ?? null;
 
         res.json({
           user: forwardedIdentity ?? 'Local developer',

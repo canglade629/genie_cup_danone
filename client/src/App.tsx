@@ -13,12 +13,14 @@ import { GenieLauncher } from './GenieLauncher';
 import { GuidedTour } from './GuidedTour';
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-  `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-    isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+  `px-3 py-2 rounded-full text-sm font-medium transition-all ${
+    isActive
+      ? 'bg-primary text-primary-foreground shadow-sm'
+      : 'text-muted-foreground hover:bg-primary/8 hover:text-primary'
   }`;
 
 const mobileNavLinkClass = ({ isActive }: { isActive: boolean }) =>
-  `block px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+  `block px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
     isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
   }`;
 
@@ -55,10 +57,16 @@ function Layout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <header className="border-b px-4 md:px-6 py-3 flex items-center gap-4">
-        <Link to="/welcome" className="text-lg font-semibold text-foreground">
-          Shelf Optimizer
+    <div className="min-h-screen bg-background flex flex-col danone-app-shell">
+      <header className="sticky top-0 z-40 border-b border-primary/10 bg-background/95 px-4 md:px-6 py-3 flex items-center gap-5 shadow-[0_1px_12px_rgba(0,55,130,0.06)] backdrop-blur">
+        <Link to="/welcome" className="flex items-center gap-3 shrink-0" aria-label="Danone Shelf Optimizer home">
+          <img src="/danone-logo.svg" alt="Danone" className="h-9 w-auto max-w-[116px] object-contain" />
+          <span className="hidden sm:block h-7 w-px bg-border" aria-hidden="true" />
+          <span className="hidden sm:block text-sm font-semibold leading-tight text-primary">
+            Shelf
+            <br />
+            Optimizer
+          </span>
         </Link>
         <NavLinks className="hidden md:flex gap-1" linkClass={navLinkClass} />
         <div className="ml-auto md:hidden">
@@ -69,7 +77,10 @@ function Layout() {
             </Button>
             <SheetContent side="left">
               <SheetHeader>
-                <SheetTitle>Navigation</SheetTitle>
+                <SheetTitle className="flex items-center gap-3">
+                  <img src="/danone-logo.svg" alt="Danone" className="h-9 w-auto max-w-[116px] object-contain" />
+                  <span className="text-primary">Shelf Optimizer</span>
+                </SheetTitle>
               </SheetHeader>
               <NavLinks
                 className="flex flex-col gap-1"

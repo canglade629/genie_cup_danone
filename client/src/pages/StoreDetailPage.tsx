@@ -100,6 +100,7 @@ type ShelfAnalysis = {
     label: string;
     manufacturer: string;
     issue?: string;
+    score?: number;
     x: number;
     y: number;
     w: number;
@@ -228,6 +229,7 @@ export function StoreDetailPage() {
 
   const [analysis, setAnalysis] = useState<ShelfAnalysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
   const [layout, setLayout] = useState<ShelfCell[]>([]);
@@ -380,15 +382,20 @@ export function StoreDetailPage() {
     });
   };
 
-  const runAnalysis = async (imageData?: string, mimeType?: string, previewUrl?: string) => {
+  const runAnalysis = async (imageData?: string, mimeType?: string, previewUrl?: string, volumePath?: string) => {
     if (!store) return;
     if (previewUrl || imageData) setAnalysisImageUrl(previewUrl ?? imageData ?? null);
     setAnalyzing(true);
+    setAnalysisError(null);
     try {
       const res = await fetch('/api/shelf/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ store_id: store.store_id }),
+        body: JSON.stringify({
+          store_id: store.store_id,
+          image_data: imageData,
+          volume_path: volumePath,
+        }),
       });
       if (!res.ok) throw new Error('Analysis failed');
       const json = (await res.json()) as ShelfAnalysis;
@@ -416,6 +423,7 @@ export function StoreDetailPage() {
       }
     } catch (err) {
       console.error(err);
+      setAnalysisError((err as Error).message);
     } finally {
       setAnalyzing(false);
       setUploading(false);
@@ -588,7 +596,9 @@ export function StoreDetailPage() {
           <Card data-tour="photo-upload">
             <CardHeader>
               <CardTitle>Capture / upload shelf photo</CardTitle>
-              <CardDescription>Stored in Lakebase with analysis metadata · evolution vs past visits</CardDescription>
+              <CardDescription>
+                Stored in Lakebase with analysis metadata. Vision uses TensorFlow.js COCO-SSD on the photo pixels.
+              </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col sm:flex-row gap-3 sm:items-end">
               <div className="space-y-2 flex-1">
@@ -602,7 +612,19 @@ export function StoreDetailPage() {
                   onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
                 />
               </div>
-              <Button variant="outline" className="gap-2" disabled={analyzing} onClick={() => void runAnalysis()}>
+              <Button
+                variant="outline"
+                className="gap-2"
+                disabled={analyzing}
+                onClick={() =>
+                  void runAnalysis(
+                    undefined,
+                    undefined,
+                    selectedSamplePath ? volumeImageUrl(selectedSamplePath) : (analysisImageUrl ?? undefined),
+                    selectedSamplePath ?? undefined
+                  )
+                }
+              >
                 <Camera className="h-4 w-4" />
                 {analyzing ? 'Analyzing…' : 'Analyze without new upload'}
               </Button>
@@ -610,6 +632,15 @@ export function StoreDetailPage() {
           </Card>
 
           {uploading && <p className="text-sm text-muted-foreground">Saving photo to Lakebase…</p>}
+          {analyzing && (
+            <p className="text-sm text-muted-foreground">Running TensorFlow.js COCO-SSD on the shelf photo…</p>
+          )}
+          {analysisError && (
+            <Alert variant="destructive">
+              <AlertTitle>Vision analysis failed</AlertTitle>
+              <AlertDescription>{analysisError}</AlertDescription>
+            </Alert>
+          )}
 
           <Card>
             <CardHeader>
@@ -647,7 +678,7 @@ export function StoreDetailPage() {
                       }`}
                       onClick={() => {
                         setSelectedSamplePath(path);
-                        void runAnalysis(undefined, undefined, volumeImageUrl(path));
+                        void runAnalysis(undefined, undefined, volumeImageUrl(path), path);
                       }}
                     >
                       <img
@@ -674,15 +705,11 @@ export function StoreDetailPage() {
                   <CardDescription>{analysis.note}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="relative w-full aspect-[16/10] rounded-md border bg-muted overflow-hidden">
+                  <div className="relative w-full rounded-md border bg-muted overflow-hidden">
                     {analysisImageUrl ? (
-                      <img
-                        src={analysisImageUrl}
-                        alt="Shelf selected for analysis"
-                        className="absolute inset-0 h-full w-full object-cover"
-                      />
+                      <img src={analysisImageUrl} alt="Shelf selected for analysis" className="block w-full h-auto" />
                     ) : (
-                      <div className="absolute inset-0 bg-gradient-to-b from-muted to-background" />
+                      <div className="w-full aspect-[16/10] bg-gradient-to-b from-muted to-background" />
                     )}
                     {analysis.detections.map((d) => (
                       <div
@@ -699,9 +726,15 @@ export function StoreDetailPage() {
                       >
                         <span className="absolute top-0 left-0 text-[10px] px-1 bg-background/90 truncate max-w-full">
                           {d.label}
+                          {typeof d.score === 'number' ? ` ${Math.round(d.score * 100)}%` : ''}
                         </span>
                       </div>
                     ))}
+                    {analyzing && (
+                      <div className="absolute inset-0 bg-background/50 flex items-center justify-center text-sm">
+                        Detecting products…
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-2">
                     {analysis.alerts.map((a) => (

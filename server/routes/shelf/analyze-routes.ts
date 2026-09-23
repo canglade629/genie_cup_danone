@@ -1,10 +1,18 @@
 import { z } from 'zod';
-import type { Application } from 'express';
+import type { Application, Request } from 'express';
+import { buildAnalysis, DEMO_NOTE, FALLBACK_NOTE, VISION_NOTE, demoDetections } from '../../vision/analyze-result';
+import { decodeImagePayload, detectShelf } from '../../vision/detect-shelf';
+
+interface VolumeHandle {
+  asUser(req: Request): { download(filePath: string): Promise<unknown> };
+  download(filePath: string): Promise<unknown>;
+}
 
 interface AppKitWithServer {
   server: {
     extend(fn: (app: Application) => void): void;
   };
+  files?: (volumeKey: string) => VolumeHandle;
 }
 
 export type DetectionIssue = 'oos' | 'wrong_placement' | 'missing_promo_tag' | 'competitor_eye_level';
@@ -18,6 +26,7 @@ export interface ShelfDetection {
   y: number;
   w: number;
   h: number;
+  score?: number;
   issue?: DetectionIssue;
   shelf_zone?: 'eye' | 'mid' | 'low';
   margin_eur?: number;
@@ -49,213 +58,38 @@ export interface ShelfAnalysisResult {
 
 const AnalyzeBody = z.object({
   store_id: z.string().min(1),
+  image_data: z.string().min(32).optional(),
+  volume_path: z.string().min(1).optional(),
 });
 
-function analyzeStore(storeId: string): ShelfAnalysisResult {
-  const critical = storeId === 'FR-PAR-005' || storeId === 'FR-PAR-001';
-  const baseDetections: ShelfDetection[] = [
-    {
-      id: 'd1',
-      label: 'Activia Nature',
-      manufacturer: 'Danone',
-      brand: 'Activia',
-      x: 0.04,
-      y: 0.08,
-      w: 0.2,
-      h: 0.22,
-      issue: 'wrong_placement',
-      shelf_zone: 'eye',
-      margin_eur: 0.28,
-    },
-    {
-      id: 'd2',
-      label: 'Yoplait Skyr',
-      manufacturer: 'Yoplait',
-      brand: 'Yoplait',
-      x: 0.28,
-      y: 0.08,
-      w: 0.22,
-      h: 0.22,
-      issue: 'competitor_eye_level',
-      shelf_zone: 'eye',
-      margin_eur: 0.22,
-    },
-    {
-      id: 'd3',
-      label: 'Oikos HP Natural',
-      manufacturer: 'Danone',
-      brand: 'Oikos',
-      x: 0.54,
-      y: 0.08,
-      w: 0.2,
-      h: 0.22,
-      shelf_zone: 'eye',
-      margin_eur: 0.42,
-    },
-    {
-      id: 'd4',
-      label: 'Nestlé Ski',
-      manufacturer: 'Nestlé',
-      brand: 'Ski',
-      x: 0.78,
-      y: 0.1,
-      w: 0.18,
-      h: 0.2,
-      issue: 'missing_promo_tag',
-      shelf_zone: 'eye',
-      margin_eur: 0.15,
-    },
-    {
-      id: 'd5',
-      label: 'Actimel',
-      manufacturer: 'Danone',
-      brand: 'Actimel',
-      x: 0.04,
-      y: 0.4,
-      w: 0.22,
-      h: 0.24,
-      shelf_zone: 'mid',
-      margin_eur: 0.31,
-    },
-    {
-      id: 'd6',
-      label: 'OOS void',
-      manufacturer: 'Empty',
-      brand: '—',
-      x: 0.3,
-      y: 0.42,
-      w: 0.2,
-      h: 0.22,
-      issue: 'oos',
-      shelf_zone: 'mid',
-      margin_eur: 0,
-    },
-    {
-      id: 'd7',
-      label: 'Volvic',
-      manufacturer: 'Danone',
-      brand: 'Volvic',
-      x: 0.54,
-      y: 0.4,
-      w: 0.2,
-      h: 0.24,
-      shelf_zone: 'mid',
-      margin_eur: 0.18,
-    },
-    {
-      id: 'd8',
-      label: 'Activia Fruits',
-      manufacturer: 'Danone',
-      brand: 'Activia',
-      x: 0.78,
-      y: 0.4,
-      w: 0.18,
-      h: 0.24,
-      issue: 'missing_promo_tag',
-      shelf_zone: 'mid',
-      margin_eur: 0.26,
-    },
-    {
-      id: 'd9',
-      label: 'Oikos Triple Zero',
-      manufacturer: 'Danone',
-      brand: 'Oikos',
-      x: 0.08,
-      y: 0.72,
-      w: 0.28,
-      h: 0.22,
-      shelf_zone: 'low',
-      margin_eur: 0.38,
-    },
-    {
-      id: 'd10',
-      label: 'Yoplait Promo',
-      manufacturer: 'Yoplait',
-      brand: 'Yoplait',
-      x: 0.42,
-      y: 0.72,
-      w: 0.24,
-      h: 0.22,
-      shelf_zone: 'low',
-      margin_eur: 0.12,
-    },
-    {
-      id: 'd11',
-      label: 'Activia Drink',
-      manufacturer: 'Danone',
-      brand: 'Activia',
-      x: 0.7,
-      y: 0.72,
-      w: 0.24,
-      h: 0.22,
-      shelf_zone: 'low',
-      margin_eur: 0.29,
-    },
-  ];
-
-  if (critical) {
-    baseDetections.push({
-      id: 'd12',
-      label: 'OOS void',
-      manufacturer: 'Empty',
-      brand: '—',
-      x: 0.04,
-      y: 0.72,
-      w: 0.12,
-      h: 0.2,
-      issue: 'oos',
-      shelf_zone: 'low',
-      margin_eur: 0,
-    });
+async function chunksToBuffer(contents: unknown): Promise<Buffer> {
+  if (Buffer.isBuffer(contents)) return contents;
+  if (contents instanceof Uint8Array) return Buffer.from(contents);
+  if (typeof contents === 'string') return Buffer.from(contents, 'base64');
+  if (contents && typeof contents === 'object' && 'contents' in contents) {
+    return chunksToBuffer((contents as { contents: unknown }).contents);
   }
-
-  const occupied = baseDetections.filter((d) => d.manufacturer !== 'Empty');
-  const danone = occupied.filter((d) => d.manufacturer === 'Danone').length;
-  const competitor = occupied.length - danone;
-  const total = occupied.length || 1;
-  const oos_count = baseDetections.filter((d) => d.issue === 'oos').length;
-  const missing_promo_tags = baseDetections.filter((d) => d.issue === 'missing_promo_tag').length;
-  const competitor_eye_level = baseDetections.filter((d) => d.issue === 'competitor_eye_level').length;
-  const issueCount = baseDetections.filter((d) => d.issue).length;
-  const compliance_score = Math.max(40, 100 - issueCount * 9);
-
-  const alerts: string[] = [];
-  if (oos_count > 0) {
-    alerts.push(
-      `${oos_count} out-of-stock facing(s) — restock from backroom before leaving (2–4% sales lift at risk).`
-    );
+  if (contents && typeof (contents as AsyncIterable<unknown>)[Symbol.asyncIterator] === 'function') {
+    const chunks: Buffer[] = [];
+    for await (const chunk of contents as AsyncIterable<unknown>) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as Uint8Array));
+    }
+    return Buffer.concat(chunks);
   }
-  if (competitor_eye_level > 0) {
-    alerts.push(
-      `${competitor_eye_level} competitor SKU(s) at eye-level — reclaim the 1.2–1.6m strike zone (+10–15% SKU lift).`
-    );
-  }
-  if (missing_promo_tags > 0) {
-    alerts.push(`${missing_promo_tags} missing promo tag(s) — trade-spend compliance gap.`);
-  }
+  throw new Error('Unsupported volume download payload');
+}
 
-  return {
-    store_id: storeId,
-    compliance_score,
-    danone_share_pct: Math.round((1000 * danone) / total) / 10,
-    competitor_share_pct: Math.round((1000 * competitor) / total) / 10,
-    oos_count,
-    missing_promo_tags,
-    competitor_eye_level,
-    alerts,
-    detections: baseDetections,
-    next_best_action: {
-      recommendation_id: `nba-${storeId}-oikos-eyelevel`,
-      title: 'Move High-Protein Oikos to eye-level',
-      rationale:
-        'Moving High-Protein Oikos to eye-level replaces a low-margin competitor and projects a +12% weekly sales lift. Accept recommendation?',
-      projected_lift_pct: 12,
-      estimated_weekly_eur: critical ? 2140 : 1840,
-      strategy_code: 'eye_level_move',
-    },
-    analyzed_at: new Date().toISOString(),
-    note: 'Demo vision pipeline — swap for Model Serving (multimodal LLM / YOLO) in production.',
-  };
+async function loadVolumeImage(appkit: AppKitWithServer, req: Request, volumePath: string): Promise<Buffer> {
+  if (!appkit.files) {
+    throw new Error('Files plugin is not configured');
+  }
+  const volume = appkit.files('files');
+  try {
+    return await chunksToBuffer(await volume.asUser(req).download(volumePath));
+  } catch (err) {
+    console.warn('Volume download as user failed, retrying as service principal:', err);
+    return chunksToBuffer(await volume.download(volumePath));
+  }
 }
 
 export function setupShelfRoutes(appkit: AppKitWithServer) {
@@ -267,8 +101,27 @@ export function setupShelfRoutes(appkit: AppKitWithServer) {
           res.status(400).json({ error: 'store_id is required' });
           return;
         }
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        res.json(analyzeStore(parsed.data.store_id));
+        const { store_id, image_data, volume_path } = parsed.data;
+
+        if (image_data && image_data.length > 1_800_000) {
+          res.status(413).json({ error: 'Image too large for analysis; use a smaller photo' });
+          return;
+        }
+
+        let image: Buffer | null = null;
+        if (image_data) {
+          image = decodeImagePayload(image_data);
+        } else if (volume_path) {
+          image = await loadVolumeImage(appkit, req, volume_path);
+        }
+
+        if (!image) {
+          res.json(buildAnalysis(store_id, demoDetections(store_id), DEMO_NOTE));
+          return;
+        }
+
+        const { detections, usedModel } = await detectShelf(image);
+        res.json(buildAnalysis(store_id, detections, usedModel ? VISION_NOTE : FALLBACK_NOTE));
       } catch (err) {
         console.error('Shelf analysis failed:', err);
         res.status(500).json({ error: 'Shelf analysis failed' });
