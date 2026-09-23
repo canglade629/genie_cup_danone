@@ -447,7 +447,7 @@ export function StoreDetailPage() {
     <div className="space-y-6 w-full max-w-7xl mx-auto">
       <div className="flex flex-col gap-3">
         <Link
-          to="/"
+          to="/map"
           className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1 w-fit"
         >
           <ArrowLeft className="h-3.5 w-3.5" />

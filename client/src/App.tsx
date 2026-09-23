@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider, NavLink, Outlet } from 'react-router';
+import { createBrowserRouter, RouterProvider, NavLink, Outlet, Link } from 'react-router';
 import { useState } from 'react';
 import { Button, Sheet, SheetContent, SheetHeader, SheetTitle } from '@databricks/appkit-ui/react';
 import { Menu } from 'lucide-react';
@@ -6,6 +6,7 @@ import { ParisMapPage } from './pages/ParisMapPage';
 import { StoreDetailPage } from './pages/StoreDetailPage';
 import { SignalsPage } from './pages/SignalsPage';
 import { DemoGuidePage } from './pages/DemoGuidePage';
+import { FirstConnectionPage, LandingPage } from './pages/LandingPage';
 import { RevenuePage } from './pages/RevenuePage';
 import { ActionsPage } from './pages/ActionsPage';
 
@@ -32,7 +33,7 @@ function NavLinks({
 }) {
   return (
     <nav className={className}>
-      <NavLink to="/" end className={linkClass} onClick={onClick}>
+      <NavLink to="/map" className={linkClass} onClick={onClick}>
         Paris map
       </NavLink>
       <NavLink to="/demo" className={linkClass} onClick={onClick}>
@@ -57,7 +58,9 @@ function Layout() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b px-4 md:px-6 py-3 flex items-center gap-4">
-        <h1 className="text-lg font-semibold text-foreground">Shelf Optimizer</h1>
+        <Link to="/welcome" className="text-lg font-semibold text-foreground">
+          Shelf Optimizer
+        </Link>
         <NavLinks className="hidden md:flex gap-1" linkClass={navLinkClass} />
         <div className="ml-auto md:hidden">
           <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
@@ -90,7 +93,9 @@ const router = createBrowserRouter([
   {
     element: <Layout />,
     children: [
-      { path: '/', element: <ParisMapPage /> },
+      { path: '/', element: <FirstConnectionPage /> },
+      { path: '/welcome', element: <LandingPage /> },
+      { path: '/map', element: <ParisMapPage /> },
       { path: '/demo', element: <DemoGuidePage /> },
       { path: '/stores/:storeId', element: <StoreDetailPage /> },
       { path: '/signals', element: <SignalsPage /> },
