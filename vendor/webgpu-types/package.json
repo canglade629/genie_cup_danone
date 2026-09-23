@@ -1,0 +1,8 @@
+{
+  "name": "@webgpu/types",
+  "version": "0.1.38",
+  "description": "CPU-only TensorFlow.js WebGPU type stub",
+  "types": "index.d.ts",
+  "license": "UNLICENSED",
+  "private": true
+}

@@ -36,6 +36,7 @@
     "@tensorflow/tfjs-backend-cpu": "4.22.0",
     "@tensorflow/tfjs-converter": "4.22.0",
     "@tensorflow/tfjs-core": "4.22.0",
+    "@webgpu/types": "file:vendor/webgpu-types",
     "clsx": "2.1.1",
     "embla-carousel-react": "8.6.0",
     "lucide-react": "0.546.0",
