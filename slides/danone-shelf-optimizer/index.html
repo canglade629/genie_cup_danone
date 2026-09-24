@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Danone Shelf Optimizer</title>
+<link rel="stylesheet" href="colors_and_type.css">
+<style>
+  html,body{margin:0;background:#0e1a1f;}
+  deck-stage:not(:defined){visibility:hidden}
+
+  section{font-family:var(--font-sans);color:var(--db-ink);background:var(--db-oat-light);overflow:hidden;}
+  .slide{position:absolute;inset:0;padding:72px 88px;display:flex;flex-direction:column;}
+  .slide.dark{background:var(--db-navy);color:#F4F1ED;}
+  .slide.ink{background:var(--db-ink-deep);color:#F4F1ED;}
+  .slide.white{background:#fff;}
+  .slide.coral{background:var(--db-coral);color:#fff;}
+
+  .eyebrow{font-size:14px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--db-lava);}
+  .dark .eyebrow,.ink .eyebrow,.coral .eyebrow{color:#FFC9BF;}
+  .title{font-size:56px;font-weight:700;line-height:1.04;letter-spacing:-.02em;color:var(--db-navy);}
+  .dark .title,.ink .title,.coral .title{color:#fff;}
+  .title .em{color:var(--db-lava);font-style:italic;}
+  .dark .title .em,.ink .title .em{color:var(--db-coral);}
+  .subtitle{font-size:22px;font-weight:400;line-height:1.4;color:var(--db-ink-soft);}
+  .dark .subtitle,.ink .subtitle{color:#B9C6CB;}
+  .body{font-size:18px;line-height:1.6;color:var(--db-ink);}
+  .footer{position:absolute;left:88px;right:88px;bottom:40px;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--db-ink-muted);}
+  .dark .footer,.ink .footer{color:#7E9098;}
+  .accent-bar{width:64px;height:6px;background:var(--db-lava);border-radius:3px;}
+  .logo-tl{height:30px;width:auto;align-self:flex-start;}
+
+  ul.bullets{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px;}
+  ul.bullets li{position:relative;padding-left:26px;font-size:18px;line-height:1.45;color:var(--db-ink);}
+  ul.bullets li::before{content:"";position:absolute;left:0;top:9px;width:9px;height:9px;border-radius:2px;background:var(--db-coral);}
+  .dark ul.bullets li,.ink ul.bullets li{color:#D9E1E4;}
+
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:44px;}
+  .card{background:#fff;border-radius:14px;box-shadow:var(--shadow-md);padding:30px;display:flex;flex-direction:column;gap:12px;}
+  .card .pico{width:52px;height:52px;border-radius:12px;background:var(--db-oat-medium);display:flex;align-items:center;justify-content:center;}
+  .card .pico span{width:20px;height:20px;border-radius:5px;background:var(--db-coral);}
+  .card .ct{font-size:24px;font-weight:700;color:var(--db-navy);}
+  .card .cb{font-size:16px;line-height:1.5;color:var(--db-ink-soft);}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;}
+  .stat{display:flex;flex-direction:column;gap:6px;}
+  .stat .num{font-size:88px;font-weight:700;letter-spacing:-.03em;color:var(--db-lava);line-height:1;}
+  .stat .lab{font-size:18px;color:#B9C6CB;max-width:300px;line-height:1.4;}
+  .slide:not(.dark):not(.ink) .stat .lab{color:var(--db-ink-soft);}
+
+  .action-kicker{font-size:14px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--db-lava);}
+  .action-title{font-size:34px;font-weight:700;line-height:1.18;letter-spacing:-.015em;color:var(--db-navy);max-width:1040px;}
+  .action-title .em{color:var(--db-lava);font-style:italic;}
+  .action-rule{height:3px;width:100%;background:var(--db-oat-medium);margin:20px 0 28px;position:relative;}
+  .action-rule::before{content:"";position:absolute;left:0;top:0;height:3px;width:88px;background:var(--db-lava);}
+
+  .exsum{display:flex;flex-direction:column;gap:0;margin-top:8px;}
+  .exsum .item{display:grid;grid-template-columns:56px 1fr;gap:22px;padding:20px 0;border-bottom:1px solid var(--db-line);align-items:start;}
+  .exsum .item:last-child{border-bottom:0;}
+  .exsum .n{font-family:var(--font-mono);font-size:24px;font-weight:500;color:var(--db-lava);line-height:1.2;}
+  .exsum .h{font-size:21px;font-weight:700;color:var(--db-navy);margin-bottom:3px;}
+  .exsum .d{font-size:16px;line-height:1.45;color:var(--db-ink-soft);}
+
+  .dv-table{border-collapse:collapse;width:100%;font-family:var(--font-sans);}
+  .dv-table th{background:var(--db-coral);color:#fff;font-weight:700;text-align:left;padding:14px 20px;font-size:16px;letter-spacing:.01em;}
+  .dv-table th:first-child{border-top-left-radius:8px;}
+  .dv-table th:last-child{border-top-right-radius:8px;}
+  .dv-table td{padding:14px 20px;font-size:17px;color:var(--db-ink);line-height:1.4;vertical-align:top;}
+  .dv-table tbody tr:nth-child(odd){background:#fff;}
+  .dv-table tbody tr:nth-child(even){background:#F3F3F3;}
+  .dv-table tbody tr td:first-child{font-weight:700;color:var(--db-navy);}
+  .dv-table .good{color:var(--db-green-700);font-weight:600;}
+
+  .stepflow{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:12px;align-items:stretch;}
+  .step{padding:0 22px;display:flex;flex-direction:column;gap:12px;position:relative;}
+  .step .sn{width:44px;height:44px;border-radius:50%;color:#fff;font-family:var(--font-mono);font-size:20px;display:flex;align-items:center;justify-content:center;background:var(--db-navy);}
+  .step:nth-child(2) .sn{background:var(--db-lava);}
+  .step:nth-child(3) .sn{background:var(--db-navy-700);}
+  .step:nth-child(4) .sn{background:var(--db-green);}
+  .step .sh{font-size:19px;font-weight:700;color:var(--db-navy);line-height:1.2;}
+  .step .sd{font-size:16px;line-height:1.45;color:var(--db-ink-soft);}
+  .step:not(:last-child)::after{content:"\2192";position:absolute;right:-9px;top:10px;color:var(--db-coral);font-size:22px;font-weight:700;}
+</style>
+</head>
+<body>
+<deck-stage width="1280" height="720">
+
+  <section data-pattern="cover" data-label="Cover">
+    <div class="slide dark">
+      <img src="assets/brand/databricks-logo-white.svg" alt="Databricks" class="logo-tl">
+      <div style="display:flex;align-items:center;gap:14px;margin-top:40px;">
+        <div class="accent-bar"></div>
+        <span class="eyebrow">Danone retail execution</span>
+      </div>
+      <div style="margin-top:auto;max-width:860px;">
+        <div class="title" style="font-size:72px;">Turn every shelf photo into a <span class="em">commercial action</span></div>
+        <div class="subtitle" style="margin-top:24px;">Prioritize the right store, recommend the right shelf move, and quantify weekly value.</div>
+      </div>
+      <img src="assets/brand/illustration-nodal-02.svg" style="position:absolute;right:64px;top:90px;height:300px;opacity:.95;" alt="">
+      <div class="footer"><span>Danone Shelf Optimizer</span><span>Paris pilot · 2026</span></div>
+    </div>
+  </section>
+
+  <section data-pattern="two-column" data-label="Business problem">
+    <div class="slide white">
+      <span class="eyebrow">The business problem</span>
+      <div class="title" style="margin-top:14px;font-size:42px;">Shelf execution gaps hide recoverable revenue</div>
+      <div style="display:flex;gap:48px;margin-top:44px;">
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--db-ink-muted);margin-bottom:18px;">What reps face</div>
+          <ul class="bullets">
+            <li>Limited field time across stores with unequal opportunity</li>
+            <li>Out-of-stocks and premium products below eye level</li>
+            <li>Promotional execution that is difficult to verify</li>
+          </ul>
+        </div>
+        <div style="width:1px;background:var(--db-line);"></div>
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--db-lava);margin-bottom:18px;">What Danone needs</div>
+          <ul class="bullets">
+            <li>A ranked store queue built on value and execution risk</li>
+            <li>A local shelf action grounded in evidence</li>
+            <li>A financial case that supports the retailer conversation</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section data-pattern="four-step" data-label="Workflow">
+    <div class="slide">
+      <div class="action-kicker">One field workflow</div>
+      <div class="action-title" style="margin-top:8px;">Move from fragmented signals to a measurable store action</div>
+      <div class="action-rule"></div>
+      <div class="stepflow">
+        <div class="step"><div class="sn">1</div><div class="sh">Prioritize</div><div class="sd">Rank stores by sales, share of shelf, compliance, and active demand signals.</div></div>
+        <div class="step"><div class="sn">2</div><div class="sh">Diagnose</div><div class="sd">Analyze the shelf image for brands, OOS voids, placement, and promo gaps.</div></div>
+        <div class="step"><div class="sn">3</div><div class="sh">Simulate</div><div class="sd">Test a better planogram and see the projected weekly euro impact.</div></div>
+        <div class="step"><div class="sn">4</div><div class="sh">Act and learn</div><div class="sd">Accept the recommendation, retain the evidence, and measure follow-through.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section data-pattern="content-bullets" data-label="Prioritization">
+    <div class="slide">
+      <span class="eyebrow">Plan the day</span>
+      <div class="title" style="margin-top:14px;font-size:42px;">Spend field time where revenue is most recoverable</div>
+      <div class="subtitle" style="margin-top:12px;">The Paris view turns store data into a rep-ready visit queue and briefing.</div>
+      <div style="display:flex;gap:56px;margin-top:40px;align-items:flex-start;">
+        <ul class="bullets" style="flex:1;">
+          <li>Priority score and tier focus attention on the most urgent stores</li>
+          <li>Danone SoS, compliance, and weekly dairy sales set the baseline</li>
+          <li>Local demand signals explain why the opportunity is changing now</li>
+          <li>Situation summaries reduce preparation before the aisle visit</li>
+        </ul>
+        <img src="assets/brand/illustration-nodal-05.svg" style="width:300px;height:auto;" alt="">
+      </div>
+      <div class="footer"><span>Priority scores are precomputed in the governed data layer</span><span>04</span></div>
+    </div>
+  </section>
+
+  <section data-pattern="three-card" data-label="Signals">
+    <div class="slide">
+      <span class="eyebrow">Anticipate demand</span>
+      <div class="title" style="margin-top:14px;font-size:42px;">Local context becomes a specific shelf action</div>
+      <div class="cards">
+        <div class="card"><div class="pico"><span></span></div><div class="ct">Demand</div><div class="cb">Fitness, search, weather, events, and family calendars reveal emerging product needs.</div></div>
+        <div class="card"><div class="pico"><span></span></div><div class="ct">Movement</div><div class="cb">Mobility, office occupancy, and tourism shape pack size and grab-and-go availability.</div></div>
+        <div class="card"><div class="pico"><span></span></div><div class="ct">Competition</div><div class="cb">Promotions and basket affinities guide eye-level defense and cross-merchandising.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section data-pattern="two-column" data-label="Shelf intelligence">
+    <div class="slide white">
+      <span class="eyebrow">Shelf intelligence</span>
+      <div class="title" style="margin-top:14px;font-size:42px;">Observe the shelf, then test the better outcome</div>
+      <div style="display:flex;gap:48px;margin-top:44px;">
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--db-ink-muted);margin-bottom:18px;">Analyze</div>
+          <ul class="bullets">
+            <li>Llama 4 Maverick detects shelf brands from the uploaded image</li>
+            <li>Rules derive share of shelf, OOS, placement, and promo alerts</li>
+            <li>The app proposes a next-best action with rationale and value</li>
+          </ul>
+        </div>
+        <div style="width:1px;background:var(--db-line);"></div>
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--db-lava);margin-bottom:18px;">Simulate</div>
+          <ul class="bullets">
+            <li>Move products through eye, mid, and low shelf zones</li>
+            <li>Apply the recommended layout and fill empty facings</li>
+            <li>Save the planogram scenario and its projected weekly value</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section data-pattern="stats" data-label="Value">
+    <div class="slide dark">
+      <span class="eyebrow">Business value case</span>
+      <div class="title" style="margin-top:14px;font-size:42px;color:#fff;">Translate execution into weekly value</div>
+      <div class="stats" style="margin-top:auto;margin-bottom:40px;">
+        <div class="stat"><span class="num">2–4%</span><span class="lab">modeled total-sales recovery from correcting out-of-stock facings</span></div>
+        <div class="stat"><span class="num">10–15%</span><span class="lab">modeled SKU lift when premium products move into the strike zone</span></div>
+        <div class="stat"><span class="num">Live €</span><span class="lab">weekly impact across availability, placement, promotion, and cross-merchandising</span></div>
+      </div>
+      <div class="footer"><span>Business-case assumptions; validate against realized sell-out</span><span>07</span></div>
+    </div>
+  </section>
+
+  <section data-pattern="exec-summary" data-label="Closed loop">
+    <div class="slide">
+      <div class="action-kicker">Close the loop</div>
+      <div class="action-title" style="margin-top:8px;">Each accepted action becomes evidence for the next decision</div>
+      <div class="action-rule"></div>
+      <div class="exsum">
+        <div class="item"><div class="n">01</div><div><div class="h">Retain the shelf evidence</div><div class="d">Governed sample images and visit history preserve the visual context behind the recommendation.</div></div></div>
+        <div class="item"><div class="n">02</div><div><div class="h">Record the commercial decision</div><div class="d">Lakebase stores accepted actions, simulations, projected lift, weekly value, and timestamp.</div></div></div>
+        <div class="item"><div class="n">03</div><div><div class="h">Ask and monitor</div><div class="d">Genie supports natural-language analysis, while the AI/BI dashboard provides management visibility.</div></div></div>
+        <div class="item"><div class="n">04</div><div><div class="h">Measure realized impact</div><div class="d">The next production step joins actions to subsequent sell-out and calibrates the lift model.</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section data-pattern="comparison-table" data-label="Architecture">
+    <div class="slide">
+      <div class="action-kicker">Built on Databricks</div>
+      <div class="action-title" style="margin-top:8px;">One platform connects governed data, AI, decisions, and measurement</div>
+      <div class="action-rule"></div>
+      <table class="dv-table">
+        <thead><tr><th style="width:21%;">Layer</th><th style="width:39%;">Databricks technology</th><th style="width:40%;">Role in Shelf Optimizer</th></tr></thead>
+        <tbody>
+          <tr><td>Data foundation</td><td class="good">Lakeflow, Delta Lake, Unity Catalog, SQL Warehouse</td><td>Build and serve stores, signals, planograms, lift assumptions, and sell-out</td></tr>
+          <tr><td>Multimodal AI</td><td class="good">Foundation Model API serving endpoint</td><td>Use Llama 4 Maverick to identify brands and shelf blocks from images</td></tr>
+          <tr><td>Decision experience</td><td class="good">Databricks Apps, AppKit, Genie</td><td>Deliver the field workflow and natural-language analysis</td></tr>
+          <tr><td>Operational loop</td><td class="good">Lakebase, UC Volume, AI/BI Dashboard</td><td>Persist actions, govern shelf scenes, and track management outcomes</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section data-pattern="closer" data-label="Closing">
+    <div class="slide dark" style="justify-content:center;align-items:flex-start;">
+      <img src="assets/brand/databricks-logo-white.svg" alt="Databricks" style="height:30px;width:auto;margin-bottom:40px;">
+      <div class="title" style="font-size:72px;">Turn Danone's data advantage into an <span class="em">execution advantage</span></div>
+      <div class="subtitle" style="margin-top:20px;max-width:900px;">Pilot the closed loop in Paris, validate realized lift, then scale the field workflow.</div>
+      <div style="display:flex;align-items:center;gap:14px;margin-top:40px;">
+        <div class="accent-bar"></div>
+        <span style="font-size:15px;color:#B9C6CB;">One store · one action · one measurable outcome</span>
+      </div>
+    </div>
+  </section>
+
+</deck-stage>
+<script src="deck-stage.js"></script>
+</body>
+</html>
