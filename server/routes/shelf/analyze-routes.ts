@@ -63,7 +63,7 @@ const ModelDetection = z.object({
 
 const AnalyzeBody = z.object({
   store_id: z.string().min(1),
-  image_data: z.string().startsWith('data:image/').max(90_000).optional(),
+  image_data: z.string().startsWith('data:image/').max(120_000).optional(),
 });
 
 const ModelResponse = z.object({
@@ -78,10 +78,21 @@ const DetectionResponse = z.object({
   detections: z.array(ModelDetection).max(30),
 });
 
-const DETECTION_PROMPT = `Analyze this retail yogurt shelf image. Return only valid JSON, with no markdown:
-{"detections":[{"label":"product or empty-space description","manufacturer":"Danone|Yoplait|Nestlé|Empty","brand":"brand name","x":0,"y":0,"w":0,"h":0,"score":0.0}]}
+const DETECTION_PROMPT = `You are annotating a French supermarket yogurt fridge for a Danone sales-rep tool.
 
-Detect distinct product facings or grouped adjacent facings and conspicuous out-of-stock empty spaces. Use at most 20 boxes. Coordinates are integers from 0 to 1000 relative to the full image, with origin at top-left. x/y are the box's top-left and w/h its dimensions. Use "Danone" for Danone-owned brands such as Activia, Actimel, Danonino, Danette and Alpro. Use "Empty" only for genuine shelf voids. If uncertain between other manufacturers, choose the closest listed competitor.`;
+Return only JSON, no markdown:
+{"detections":[{"label":"Activia","manufacturer":"Danone","brand":"Activia","x":40,"y":12,"w":160,"h":130,"score":0.9}]}
+
+Hard rules:
+- label and brand MUST be the brand printed on the pack (Activia, Oikos, Actimel, Danette, Yoplait, Panier, Yaos, Müller, Ski, La Laitière, etc.).
+- NEVER use generic words such as "product", "yogurt", "item", "SKU", or "facing".
+- One box per contiguous block of the SAME brand on the SAME shelf row. Do not merge two brands into one box.
+- manufacturer is exactly one of: Danone, Yoplait, Nestlé, Empty.
+- Danone-owned: Activia, Actimel, Oikos, Danette, Danonino, Alpro, Taillefine, Danone Nature.
+- Müller is a competitor; if it is the only fit, use manufacturer Yoplait.
+- Empty gaps / missing facings: label "OOS void", manufacturer Empty, brand "—".
+- Coordinates are integers 0–1000 for the full image, origin top-left. x/y = box top-left, w/h = size.
+- At most 20 boxes. Prefer fewer precise boxes over many unlabeled ones.`;
 
 function extractJson(content: string) {
   const trimmed = content.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
@@ -91,13 +102,35 @@ function extractJson(content: string) {
   return JSON.parse(trimmed.slice(start, end + 1)) as unknown;
 }
 
-function normalizeManufacturer(value: string): ShelfDetection['manufacturer'] {
-  const normalized = value.toLowerCase();
-  if (normalized.includes('danone')) return 'Danone';
-  if (normalized.includes('yoplait')) return 'Yoplait';
-  if (normalized.includes('nestl')) return 'Nestlé';
-  if (normalized.includes('empty') || normalized.includes('void')) return 'Empty';
-  return 'Yoplait';
+const GENERIC_LABEL = /^(product|item|yogurt|yoghurt|sku|facing|unlabeled|unknown|pack|goods)$/i;
+
+function manufacturerFromText(value: string): ShelfDetection['manufacturer'] | null {
+  const normalized = value.toLowerCase().replaceAll('é', 'e').replaceAll('ü', 'u').replaceAll('ö', 'o');
+  if (/(empty|void|oos|gap)/.test(normalized)) return 'Empty';
+  if (/(activia|actimel|oikos|danette|danonino|alpro|taillefine|danone)/.test(normalized)) return 'Danone';
+  if (/(nestle|ski|laitiere|lc1)/.test(normalized)) return 'Nestlé';
+  if (/(yoplait|yop|panier|yaos|muller|skyr)/.test(normalized)) return 'Yoplait';
+  return null;
+}
+
+function normalizeManufacturer(manufacturer: string, brand: string, label: string): ShelfDetection['manufacturer'] {
+  return (
+    manufacturerFromText(manufacturer) ??
+    manufacturerFromText(brand) ??
+    manufacturerFromText(label) ??
+    'Yoplait'
+  );
+}
+
+function normalizeLabel(label: string, brand: string, manufacturer: ShelfDetection['manufacturer']) {
+  const trimmedLabel = label.trim();
+  const trimmedBrand = brand.trim();
+  if (manufacturer === 'Empty') return 'OOS void';
+  if (GENERIC_LABEL.test(trimmedLabel) || !trimmedLabel) {
+    if (trimmedBrand && !GENERIC_LABEL.test(trimmedBrand)) return trimmedBrand;
+    return manufacturer;
+  }
+  return trimmedLabel;
 }
 
 function clampCoordinate(value: number) {
@@ -124,7 +157,7 @@ async function detectShelf(imageData: string): Promise<ShelfDetection[]> {
           ],
         },
       ],
-      max_tokens: 2_500,
+      max_tokens: 3_000,
       temperature: 0,
     },
   });
@@ -135,17 +168,21 @@ async function detectShelf(imageData: string): Promise<ShelfDetection[]> {
   const parsed = DetectionResponse.parse(extractJson(content));
   return parsed.detections
     .filter((item) => item.w > 0 && item.h > 0)
-    .map((item, index) => ({
-      id: `fmapi-${index + 1}`,
-      label: item.label,
-      manufacturer: normalizeManufacturer(item.manufacturer),
-      brand: item.brand,
-      x: clampCoordinate(item.x),
-      y: clampCoordinate(item.y),
-      w: clampCoordinate(Math.min(item.w, 1000 - item.x)),
-      h: clampCoordinate(Math.min(item.h, 1000 - item.y)),
-      score: item.score,
-    }));
+    .map((item, index) => {
+      const manufacturer = normalizeManufacturer(item.manufacturer, item.brand, item.label);
+      const label = normalizeLabel(item.label, item.brand, manufacturer);
+      return {
+        id: `fmapi-${index + 1}`,
+        label,
+        manufacturer,
+        brand: GENERIC_LABEL.test(item.brand) ? label : item.brand || label,
+        x: clampCoordinate(item.x),
+        y: clampCoordinate(item.y),
+        w: clampCoordinate(Math.min(item.w, 1000 - item.x)),
+        h: clampCoordinate(Math.min(item.h, 1000 - item.y)),
+        score: item.score,
+      };
+    });
 }
 
 export function setupShelfRoutes(appkit: AppKitWithServer) {

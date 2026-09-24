@@ -1,5 +1,5 @@
-const MAX_EDGE = 768;
-const MAX_DATA_URL_LENGTH = 72_000;
+const MAX_EDGE = 896;
+const MAX_DATA_URL_LENGTH = 110_000;
 
 export async function prepareShelfImage(source: string): Promise<string> {
   const response = await fetch(source);
@@ -12,7 +12,7 @@ export async function prepareShelfImage(source: string): Promise<string> {
   const context = canvas.getContext('2d');
   if (!context) throw new Error('Canvas image processing is unavailable');
 
-  let quality = 0.72;
+  let quality = 0.82;
   let dataUrl = '';
   for (let attempt = 0; attempt < 10; attempt += 1) {
     canvas.width = width;

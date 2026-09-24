@@ -25,7 +25,7 @@ import {
   useAnalyticsQuery,
 } from '@databricks/appkit-ui/react';
 import { sql } from '@databricks/appkit-ui/js';
-import { ArrowLeft, Camera, CheckCircle2, GripVertical, Sparkles, Upload, Zap } from 'lucide-react';
+import { ArrowLeft, Camera, CheckCircle2, ChevronDown, GripVertical, Sparkles, Upload, Zap } from 'lucide-react';
 import { prepareShelfImage } from '@/lib/prepare-shelf-image';
 
 type StoreRow = {
@@ -226,6 +226,7 @@ export function StoreDetailPage() {
   const [samplesLoading, setSamplesLoading] = useState(true);
   const [samplesError, setSamplesError] = useState<string | null>(null);
   const [selectedSamplePath, setSelectedSamplePath] = useState<string | null>(null);
+  const [libraryOpen, setLibraryOpen] = useState(true);
   const [analysisImageUrl, setAnalysisImageUrl] = useState<string | null>(null);
 
   const [analysis, setAnalysis] = useState<ShelfAnalysis | null>(null);
@@ -644,58 +645,77 @@ export function StoreDetailPage() {
           )}
 
           <Card>
-            <CardHeader>
-              <CardTitle>Synthetic shelf library</CardTitle>
-              <CardDescription>
-                20 French-market shelf scenes loaded from a governed Unity Catalog volume.
-              </CardDescription>
+            <CardHeader className="p-0">
+              <button
+                type="button"
+                className="flex w-full items-start justify-between gap-4 p-6 text-left"
+                aria-expanded={libraryOpen}
+                onClick={() => setLibraryOpen((open) => !open)}
+              >
+                <div className="space-y-1.5">
+                  <CardTitle>Synthetic shelf library</CardTitle>
+                  <CardDescription>
+                    {selectedSamplePath
+                      ? `Selected: ${imageTitle(selectedSamplePath.split('/').pop() ?? 'Synthetic shelf')}`
+                      : '20 French-market shelf scenes loaded from a governed Unity Catalog volume.'}
+                  </CardDescription>
+                </div>
+                <ChevronDown
+                  className={`mt-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform ${
+                    libraryOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
             </CardHeader>
-            <CardContent>
-              {samplesLoading && <Skeleton className="h-48 w-full" />}
-              {samplesError && (
-                <Alert variant="destructive">
-                  <AlertTitle>Synthetic shelves unavailable</AlertTitle>
-                  <AlertDescription>{samplesError}</AlertDescription>
-                </Alert>
-              )}
-              {!samplesLoading && !samplesError && sampleImages.length === 0 && (
-                <Empty>
-                  <EmptyHeader>
-                    <EmptyTitle>No synthetic shelves found</EmptyTitle>
-                    <EmptyDescription>Upload images to the configured shelf_images volume.</EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {sampleImages.map((image) => {
-                  const path = image.path ?? image.name ?? '';
-                  const selected = selectedSamplePath === path;
-                  return (
-                    <button
-                      key={path}
-                      type="button"
-                      className={`overflow-hidden rounded-md border text-left transition-colors ${
-                        selected ? 'border-primary ring-2 ring-primary/30' : 'hover:border-primary/60'
-                      }`}
-                      onClick={() => {
-                        setSelectedSamplePath(path);
-                        void runAnalysis(undefined, undefined, volumeImageUrl(path));
-                      }}
-                    >
-                      <img
-                        src={volumeImageUrl(path)}
-                        alt={imageTitle(image.name ?? 'Synthetic shelf')}
-                        className="h-32 w-full object-cover bg-muted"
-                        loading="lazy"
-                      />
-                      <span className="block p-2 text-xs font-medium">
-                        {imageTitle(image.name ?? 'Synthetic shelf')}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </CardContent>
+            {libraryOpen && (
+              <CardContent>
+                {samplesLoading && <Skeleton className="h-48 w-full" />}
+                {samplesError && (
+                  <Alert variant="destructive">
+                    <AlertTitle>Synthetic shelves unavailable</AlertTitle>
+                    <AlertDescription>{samplesError}</AlertDescription>
+                  </Alert>
+                )}
+                {!samplesLoading && !samplesError && sampleImages.length === 0 && (
+                  <Empty>
+                    <EmptyHeader>
+                      <EmptyTitle>No synthetic shelves found</EmptyTitle>
+                      <EmptyDescription>Upload images to the configured shelf_images volume.</EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {sampleImages.map((image) => {
+                    const path = image.path ?? image.name ?? '';
+                    const selected = selectedSamplePath === path;
+                    return (
+                      <button
+                        key={path}
+                        type="button"
+                        className={`overflow-hidden rounded-md border text-left transition-colors ${
+                          selected ? 'border-primary ring-2 ring-primary/30' : 'hover:border-primary/60'
+                        }`}
+                        onClick={() => {
+                          setSelectedSamplePath(path);
+                          setLibraryOpen(false);
+                          void runAnalysis(undefined, undefined, volumeImageUrl(path));
+                        }}
+                      >
+                        <img
+                          src={volumeImageUrl(path)}
+                          alt={imageTitle(image.name ?? 'Synthetic shelf')}
+                          className="h-32 w-full object-cover bg-muted"
+                          loading="lazy"
+                        />
+                        <span className="block p-2 text-xs font-medium">
+                          {imageTitle(image.name ?? 'Synthetic shelf')}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            )}
           </Card>
 
           {analysis && (
