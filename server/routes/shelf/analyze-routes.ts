@@ -105,7 +105,7 @@ function extractJson(content: string) {
 const GENERIC_LABEL = /^(product|item|yogurt|yoghurt|sku|facing|unlabeled|unknown|pack|goods)$/i;
 
 function manufacturerFromText(value: string): ShelfDetection['manufacturer'] | null {
-  const normalized = value.toLowerCase().replaceAll('é', 'e').replaceAll('ü', 'u').replaceAll('ö', 'o');
+  const normalized = value.toLowerCase().replace(/é/g, 'e').replace(/ü/g, 'u').replace(/ö/g, 'o');
   if (/(empty|void|oos|gap)/.test(normalized)) return 'Empty';
   if (/(activia|actimel|oikos|danette|danonino|alpro|taillefine|danone)/.test(normalized)) return 'Danone';
   if (/(nestle|ski|laitiere|lc1)/.test(normalized)) return 'Nestlé';
